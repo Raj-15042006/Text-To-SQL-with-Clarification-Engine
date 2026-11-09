@@ -170,12 +170,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 5. Environment Configuration
-Copy the `.env.example` file to `.env`:
-```bash
-cp .env.example .env
-```
-
 # Server Configuration
 HOST=127.0.0.1
 PORT=8000
