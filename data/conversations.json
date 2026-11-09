@@ -1,0 +1,3338 @@
+{
+  "24f4027d-18dd-4820-80ce-7b22492cc572": {
+    "id": "24f4027d-18dd-4820-80ce-7b22492cc572",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Show summary and sample rows from i...",
+    "messages": [
+      {
+        "id": "fb921193-412a-4781-b973-27762b47f5dc",
+        "role": "user",
+        "content": "Show summary and sample rows from ipl",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "31a21478-b6ec-420a-aa1c-9c2f704f8ac4",
+        "timestamp": "2026-11-07T14:57:27.738248"
+      },
+      {
+        "id": "8e0228c0-522c-48a8-8d50-fe650889f948",
+        "role": "assistant",
+        "content": "Analysis error: LLM Provider Error: additionalProperties is only supported in Gemini Enterprise Agent Platform mode, , not in Gemini Developer API mode.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "31a21478-b6ec-420a-aa1c-9c2f704f8ac4",
+        "timestamp": "2026-11-07T14:57:29.106721"
+      },
+      {
+        "id": "7abbf78f-5305-4968-ac57-6b4f6e0d0dc3",
+        "role": "user",
+        "content": "Calculate Net Run Rate For each team and prepare a match result table with standing with metriics matches played,win,loss,tie,points,net run rate etc and nrr can be positive or negative and each win is 2 points and each no result is 1 point",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "c6ca3476-033a-40f8-96aa-7b379cf6341d",
+        "timestamp": "2026-11-07T15:04:06.978594"
+      },
+      {
+        "id": "0edfec67-f024-426b-babc-b52bc3d51884",
+        "role": "assistant",
+        "content": "Analysis error: LLM Provider Error: additionalProperties is only supported in Gemini Enterprise Agent Platform mode, , not in Gemini Developer API mode.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "c6ca3476-033a-40f8-96aa-7b379cf6341d",
+        "timestamp": "2026-11-07T15:04:07.014230"
+      },
+      {
+        "id": "ab7bc20f-7bc2-477c-a845-9ff97873658d",
+        "role": "user",
+        "content": "Calculate Net Run Rate For each team and prepare a match result table with standing with metriics matches played,win,loss,tie,points,net run rate etc and nrr can be positive or negative and each win is 2 points and each no result is 1 point",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "fd1af3ed-10fb-413b-80d4-f9e5db86467a",
+        "timestamp": "2026-11-07T15:19:35.068836"
+      },
+      {
+        "id": "6e9957df-9d9d-4d31-96cc-c4902bff6e6e",
+        "role": "assistant",
+        "content": "The IPL standings based on the calculated Net Run Rate (NRR) and points are as follows:\n\n| Team | Matches | Wins | Losses | Ties | Points | NRR |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n| Gujarat | 16 | 12 | 4 | 0 | 24 | -0.116 |\n| Rajasthan | 17 | 10 | 7 | 0 | 20 | -0.509 |\n| Banglore | 16 | 9 | 7 | 0 | 18 | 0.650 |\n| Lucknow | 15 |",
+        "sql": "WITH team_stats AS (SELECT team, SUM(matches) AS matches_played, SUM(wins) AS wins, SUM(losses) AS losses, SUM(ties) AS ties, SUM(points) AS points, SUM(runs_scored) AS total_runs_scored, SUM(overs_faced) AS total_overs_faced, SUM(runs_conceded) AS total_runs_conceded, SUM(overs_bowled) AS total_overs_bowled FROM (SELECT team1 AS team, 1 AS matches, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team1 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, first_ings_score AS runs_scored, 20.0 AS overs_faced, second_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl UNION ALL SELECT team2 AS team, 1 AS matches, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team2 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, second_ings_score AS runs_scored, 20.0 AS overs_faced, first_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl) AS sub GROUP BY team) SELECT team, matches_played, wins, losses, ties, points, ROUND(((total_runs_scored::numeric / NULLIF(total_overs_faced, 0)) - (total_runs_conceded::numeric / NULLIF(total_overs_bowled, 0))), 3) AS net_run_rate FROM team_stats ORDER BY points DESC, net_run_rate DESC;",
+        "sql_explanation": "The query uses a CTE to normalize the IPL table by treating team1 and team2 as individual entries. It calculates wins, losses, ties, and points (2 for win, 1 for tie) per team. NRR is calculated as (Runs Scored / Overs Faced) - (Runs Conceded / Overs Bowled). Overs are assumed to be 20 per innings as per standard T20 format.",
+        "columns": [
+          "team",
+          "matches_played",
+          "wins",
+          "losses",
+          "ties",
+          "points",
+          "net_run_rate"
+        ],
+        "rows": [
+          {
+            "team": "Gujarat",
+            "matches_played": 16,
+            "wins": 12,
+            "losses": 4,
+            "ties": 0,
+            "points": 24,
+            "net_run_rate": "-0.116"
+          },
+          {
+            "team": "Rajasthan",
+            "matches_played": 17,
+            "wins": 10,
+            "losses": 7,
+            "ties": 0,
+            "points": 20,
+            "net_run_rate": "-0.509"
+          },
+          {
+            "team": "Banglore",
+            "matches_played": 16,
+            "wins": 9,
+            "losses": 7,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.650"
+          },
+          {
+            "team": "Lucknow",
+            "matches_played": 15,
+            "wins": 9,
+            "losses": 6,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.153"
+          },
+          {
+            "team": "Delhi",
+            "matches_played": 14,
+            "wins": 7,
+            "losses": 7,
+            "ties": 0,
+            "points": 14,
+            "net_run_rate": "-0.029"
+          }
+        ],
+        "row_count": 10,
+        "execution_time_ms": 157.42,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "fd1af3ed-10fb-413b-80d4-f9e5db86467a",
+        "timestamp": "2026-11-07T15:19:43.103601"
+      },
+      {
+        "id": "e1053e37-b98d-4953-bd75-cca7789c8b31",
+        "role": "user",
+        "content": "i want the gull table",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7d96d162-9be2-4335-9535-9636560fb1d7",
+        "timestamp": "2026-11-07T15:20:07.498473"
+      },
+      {
+        "id": "acae7310-1b07-4920-a3c3-d34b7e1b47e2",
+        "role": "assistant",
+        "content": "Here is the full IPL standings table based on the calculated Net Run Rate (NRR) and points:\n\n| Team | Matches | Wins | Losses | Ties | Points | NRR |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n| Gujarat | 16 | 12 | 4 | 0 | 24 | -0.116 |\n| Rajasthan | 17 | 10 | 7 | 0 | 20 | -0.509 |\n| Banglore | 16 | 9 | 7 | 0 | 18 | 0.650 |\n| Lucknow | 15 |",
+        "sql": "WITH team_stats AS (SELECT team, SUM(matches) AS matches_played, SUM(wins) AS wins, SUM(losses) AS losses, SUM(ties) AS ties, SUM(points) AS points, SUM(runs_scored) AS total_runs_scored, SUM(overs_faced) AS total_overs_faced, SUM(runs_conceded) AS total_runs_conceded, SUM(overs_bowled) AS total_overs_bowled FROM (SELECT team1 AS team, 1 AS matches, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team1 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, first_ings_score AS runs_scored, 20.0 AS overs_faced, second_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl UNION ALL SELECT team2 AS team, 1 AS matches, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team2 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, second_ings_score AS runs_scored, 20.0 AS overs_faced, first_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl) AS sub GROUP BY team) SELECT team, matches_played, wins, losses, ties, points, ROUND(((total_runs_scored::numeric / NULLIF(total_overs_faced, 0)) - (total_runs_conceded::numeric / NULLIF(total_overs_bowled, 0))), 3) AS net_run_rate FROM team_stats ORDER BY points DESC, net_run_rate DESC;",
+        "sql_explanation": "This query reconstructs the full IPL standings table by aggregating match results, calculating points based on win/tie rules, and computing the Net Run Rate (NRR) for each team using the standard formula (Runs Scored/Overs Faced - Runs Conceded/Overs Bowled).",
+        "columns": [
+          "team",
+          "matches_played",
+          "wins",
+          "losses",
+          "ties",
+          "points",
+          "net_run_rate"
+        ],
+        "rows": [
+          {
+            "team": "Gujarat",
+            "matches_played": 16,
+            "wins": 12,
+            "losses": 4,
+            "ties": 0,
+            "points": 24,
+            "net_run_rate": "-0.116"
+          },
+          {
+            "team": "Rajasthan",
+            "matches_played": 17,
+            "wins": 10,
+            "losses": 7,
+            "ties": 0,
+            "points": 20,
+            "net_run_rate": "-0.509"
+          },
+          {
+            "team": "Banglore",
+            "matches_played": 16,
+            "wins": 9,
+            "losses": 7,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.650"
+          },
+          {
+            "team": "Lucknow",
+            "matches_played": 15,
+            "wins": 9,
+            "losses": 6,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.153"
+          },
+          {
+            "team": "Delhi",
+            "matches_played": 14,
+            "wins": 7,
+            "losses": 7,
+            "ties": 0,
+            "points": 14,
+            "net_run_rate": "-0.029"
+          }
+        ],
+        "row_count": 10,
+        "execution_time_ms": 69.96,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7d96d162-9be2-4335-9535-9636560fb1d7",
+        "timestamp": "2026-11-07T15:20:12.590105"
+      },
+      {
+        "id": "af937aed-ac57-457a-afe7-0cfe3c5c6203",
+        "role": "user",
+        "content": "i want the table included with full team",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "75d483a5-3f17-4841-83c7-82730ec34f9f",
+        "timestamp": "2026-11-07T15:23:11.224217"
+      },
+      {
+        "id": "604aec0e-fb79-474d-90b3-d285f0370a38",
+        "role": "assistant",
+        "content": "Here is the complete IPL standings table including all teams:\n\n| Team | Matches | Wins | Losses | Ties | Points | NRR |\n| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n| Gujarat | 16 | 12 | 4 | 0 | 24 | -0.116 |\n| Rajasthan | 17 | 10 | 7 | 0 | 20 | -0.509 |\n| Banglore | 16 | 9 | 7 | 0 | 18 | 0.650 |\n| Lucknow | 15 | 9 | 6 | 0 |",
+        "sql": "WITH team_stats AS (SELECT team, SUM(matches) AS matches_played, SUM(wins) AS wins, SUM(losses) AS losses, SUM(ties) AS ties, SUM(points) AS points, SUM(runs_scored) AS total_runs_scored, SUM(overs_faced) AS total_overs_faced, SUM(runs_conceded) AS total_runs_conceded, SUM(overs_bowled) AS total_overs_bowled FROM (SELECT team1 AS team, 1 AS matches, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team1 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, first_ings_score AS runs_scored, 20.0 AS overs_faced, second_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl UNION ALL SELECT team2 AS team, 1 AS matches, CASE WHEN match_winner = team2 THEN 1 ELSE 0 END AS wins, CASE WHEN match_winner = team1 THEN 1 ELSE 0 END AS losses, CASE WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS ties, CASE WHEN match_winner = team2 THEN 2 WHEN match_winner = 'Tie' THEN 1 ELSE 0 END AS points, second_ings_score AS runs_scored, 20.0 AS overs_faced, first_ings_score AS runs_conceded, 20.0 AS overs_bowled FROM ipl) AS sub GROUP BY team) SELECT team, matches_played, wins, losses, ties, points, ROUND(((total_runs_scored::numeric / NULLIF(total_overs_faced, 0)) - (total_runs_conceded::numeric / NULLIF(total_overs_bowled, 0))), 3) AS net_run_rate FROM team_stats ORDER BY points DESC, net_run_rate DESC;",
+        "sql_explanation": "This query uses a Common Table Expression (CTE) to aggregate match data for each team by unioning team1 and team2 records, calculating wins, losses, ties, and points, then computes the Net Run Rate (NRR) as the difference between average runs scored and average runs conceded per over.",
+        "columns": [
+          "team",
+          "matches_played",
+          "wins",
+          "losses",
+          "ties",
+          "points",
+          "net_run_rate"
+        ],
+        "rows": [
+          {
+            "team": "Gujarat",
+            "matches_played": 16,
+            "wins": 12,
+            "losses": 4,
+            "ties": 0,
+            "points": 24,
+            "net_run_rate": "-0.116"
+          },
+          {
+            "team": "Rajasthan",
+            "matches_played": 17,
+            "wins": 10,
+            "losses": 7,
+            "ties": 0,
+            "points": 20,
+            "net_run_rate": "-0.509"
+          },
+          {
+            "team": "Banglore",
+            "matches_played": 16,
+            "wins": 9,
+            "losses": 7,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.650"
+          },
+          {
+            "team": "Lucknow",
+            "matches_played": 15,
+            "wins": 9,
+            "losses": 6,
+            "ties": 0,
+            "points": 18,
+            "net_run_rate": "0.153"
+          },
+          {
+            "team": "Delhi",
+            "matches_played": 14,
+            "wins": 7,
+            "losses": 7,
+            "ties": 0,
+            "points": 14,
+            "net_run_rate": "-0.029"
+          }
+        ],
+        "row_count": 10,
+        "execution_time_ms": 91.78,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "75d483a5-3f17-4841-83c7-82730ec34f9f",
+        "timestamp": "2026-11-07T15:23:16.502468"
+      },
+      {
+        "id": "3c10e33c-c974-45cc-9f8d-09a57e7c93f5",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "ecb2425e-d547-43b2-a3a5-f241774fc660",
+        "timestamp": "2026-11-07T16:06:19.542397"
+      },
+      {
+        "id": "6680288f-034e-4e18-af13-dfd153f7d004",
+        "role": "assistant",
+        "content": "Execution error: PostgreSQL Execution Error: column \"ipl.match_id\" must appear in the GROUP BY clause or be used in an aggregate function\nLINE 5:   match_id DESC LIMIT 100\n          ^",
+        "sql": "SELECT SUM(match_id) AS sum_match_id FROM ipl ORDER BY match_id DESC;",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "ecb2425e-d547-43b2-a3a5-f241774fc660",
+        "timestamp": "2026-11-07T16:06:19.669777"
+      },
+      {
+        "id": "783f34d4-9094-4233-b545-d2bc01998f05",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b5c5c6cf-9a64-4c06-b9a6-80776602b707",
+        "timestamp": "2026-11-07T16:38:26.346967"
+      },
+      {
+        "id": "c83b27f8-61e9-4802-87b0-6a7f560e7f0e",
+        "role": "assistant",
+        "content": "Query returned: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 77.3%).",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 170.14,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b5c5c6cf-9a64-4c06-b9a6-80776602b707",
+        "timestamp": "2026-11-07T16:38:26.601283"
+      },
+      {
+        "id": "ab748ea4-adfa-4539-9431-2371cd6bd60b",
+        "role": "user",
+        "content": "Explain this query",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9aec2f91-bbd1-4d2a-ae0f-929f91100f22",
+        "timestamp": "2026-11-07T16:38:36.456050"
+      },
+      {
+        "id": "8d233abf-c5a7-4a7f-9f89-38e357709325",
+        "role": "assistant",
+        "content": "The query returned **20** matching record(s). Top result: **Dwayne Bravo**.",
+        "sql": "SELECT best_bowling, top_scorer, player_of_the_match, match_winner FROM ipl LIMIT 20;",
+        "sql_explanation": "Retrieved `best_bowling, top_scorer, player_of_the_match, match_winner` from `ipl`.",
+        "columns": [
+          "best_bowling",
+          "top_scorer",
+          "player_of_the_match",
+          "match_winner"
+        ],
+        "rows": [
+          {
+            "best_bowling": "Dwayne Bravo",
+            "top_scorer": "MS Dhoni",
+            "player_of_the_match": "Umesh Yadav",
+            "match_winner": "Kolkata"
+          },
+          {
+            "best_bowling": "Kuldeep Yadav",
+            "top_scorer": "Ishan Kishan",
+            "player_of_the_match": "Kuldeep Yadav",
+            "match_winner": "Delhi"
+          },
+          {
+            "best_bowling": "Mohammed Siraj",
+            "top_scorer": "Faf du Plessis",
+            "player_of_the_match": "Odean Smith",
+            "match_winner": "Punjab"
+          },
+          {
+            "best_bowling": "Mohammed Shami",
+            "top_scorer": "Deepak Hooda",
+            "player_of_the_match": "Mohammed Shami",
+            "match_winner": "Gujarat"
+          },
+          {
+            "best_bowling": "Yuzvendra Chahal",
+            "top_scorer": "Aiden Markram",
+            "player_of_the_match": "Sanju Samson",
+            "match_winner": "Rajasthan"
+          }
+        ],
+        "row_count": 20,
+        "execution_time_ms": 94.56,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9aec2f91-bbd1-4d2a-ae0f-929f91100f22",
+        "timestamp": "2026-11-07T16:38:36.589967"
+      },
+      {
+        "id": "009125a8-ef3b-4411-9c1e-86e1deb9e434",
+        "role": "user",
+        "content": "give strike rate for the highest wicket taking bowler",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7dc71abf-ce85-4b2a-b4c4-ad65ea6e6774",
+        "timestamp": "2026-11-07T16:39:10.967770"
+      },
+      {
+        "id": "60de7986-7b25-4dd6-8a4e-3b1b72a1be37",
+        "role": "assistant",
+        "content": "Query returned: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Ranked metrics for `ipl`. Filtered where `best_bowling_figure` LIKE '%--%'.",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 91.32,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7dc71abf-ce85-4b2a-b4c4-ad65ea6e6774",
+        "timestamp": "2026-11-07T16:39:11.091181"
+      }
+    ],
+    "created_at": "2026-11-07T14:57:27.732097",
+    "updated_at": "2026-11-07T16:39:11.091206"
+  },
+  "b651e9d0-9e1a-441d-b8a1-69f348659b56": {
+    "id": "b651e9d0-9e1a-441d-b8a1-69f348659b56",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "How many students are enrolled?",
+    "messages": [
+      {
+        "id": "02158d79-45f8-4658-a3e5-8211e2d4a8cc",
+        "role": "user",
+        "content": "How many students are enrolled?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "be7d9eba-d009-4df8-8d3a-e9980831c097",
+        "timestamp": "2026-11-07T16:01:57.326478"
+      },
+      {
+        "id": "1e28f8d5-d2b7-49d3-81a6-746174a16098",
+        "role": "assistant",
+        "content": "Validation failed: Schema violation: Table 'students' does not exist in the active database schema.",
+        "sql": "SELECT COUNT(*) AS total_students FROM students;",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "be7d9eba-d009-4df8-8d3a-e9980831c097",
+        "timestamp": "2026-11-07T16:01:57.362517"
+      }
+    ],
+    "created_at": "2026-11-07T16:01:57.322505",
+    "updated_at": "2026-11-07T16:01:57.362536"
+  },
+  "b0551e5c-7d98-43ed-8409-e35b8e65b72e": {
+    "id": "b0551e5c-7d98-43ed-8409-e35b8e65b72e",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "How many students are enrolled?",
+    "messages": [
+      {
+        "id": "b2eb877f-4d40-4757-85d6-56a38b85264f",
+        "role": "user",
+        "content": "How many students are enrolled?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "97bee513-2015-44b4-b7c3-84c362c33688",
+        "timestamp": "2026-11-07T16:02:25.746007"
+      },
+      {
+        "id": "255893e1-f708-4aef-a451-9189fd7baa80",
+        "role": "assistant",
+        "content": "Validation failed: Schema violation: Table 'students' does not exist in the active database schema.",
+        "sql": "SELECT COUNT(*) AS total_students FROM students;",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "97bee513-2015-44b4-b7c3-84c362c33688",
+        "timestamp": "2026-11-07T16:02:25.752813"
+      }
+    ],
+    "created_at": "2026-11-07T16:02:25.744274",
+    "updated_at": "2026-11-07T16:02:25.752823"
+  },
+  "46ea6934-3a06-4926-afde-fe2fcdd90973": {
+    "id": "46ea6934-3a06-4926-afde-fe2fcdd90973",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Show all products from sarah_produc...",
+    "messages": [
+      {
+        "id": "ecdce218-b393-473d-8efd-a1059c29173d",
+        "role": "user",
+        "content": "Show all products from sarah_products",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "92faa2e6-8190-4275-b4bc-7268525f63b7",
+        "timestamp": "2026-11-07T16:03:02.540397"
+      },
+      {
+        "id": "392c55f2-b72d-4be6-b128-811cb2bb245e",
+        "role": "assistant",
+        "content": "The query returned **3** matching record(s). Top result: **1**.",
+        "sql": "SELECT product_id, product_name, category FROM sarah_products LIMIT 20;",
+        "sql_explanation": "Retrieved `product_id, product_name, category` from `sarah_products`.",
+        "columns": [
+          "product_id",
+          "product_name",
+          "category"
+        ],
+        "rows": [
+          {
+            "product_id": 1,
+            "product_name": "Alpha Widget",
+            "category": "Hardware"
+          },
+          {
+            "product_id": 2,
+            "product_name": "Beta Drone",
+            "category": "Robotics"
+          },
+          {
+            "product_id": 3,
+            "product_name": "Gamma Sensor",
+            "category": "IoT"
+          }
+        ],
+        "row_count": 3,
+        "execution_time_ms": 57.22,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "92faa2e6-8190-4275-b4bc-7268525f63b7",
+        "timestamp": "2026-11-07T16:03:02.613258"
+      }
+    ],
+    "created_at": "2026-11-07T16:03:02.538389",
+    "updated_at": "2026-11-07T16:03:02.613274"
+  },
+  "10265ee5-bb1e-4f4d-a056-ccc54a34e2dc": {
+    "id": "10265ee5-bb1e-4f4d-a056-ccc54a34e2dc",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "How many students are enrolled?",
+    "messages": [
+      {
+        "id": "dc660eaf-6f2a-406c-b273-13bd95b47510",
+        "role": "user",
+        "content": "How many students are enrolled?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d708c803-180c-46ad-bfb0-051978da897c",
+        "timestamp": "2026-11-07T16:03:34.493060"
+      },
+      {
+        "id": "bec0f822-4cb9-4dba-b7c2-6d4ca403e3cf",
+        "role": "assistant",
+        "content": "The calculated **Total Students** is **5**.",
+        "sql": "SELECT COUNT(*) AS total_students FROM students;",
+        "sql_explanation": "Generated from learned pattern (intent: AGGREGATE_COUNT, confidence: 71.7%).",
+        "columns": [
+          "total_students"
+        ],
+        "rows": [
+          {
+            "total_students": 5
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.42,
+        "relationships": [
+          "marks.student_id \u2192 students.id",
+          "students.department_id \u2192 departments.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d708c803-180c-46ad-bfb0-051978da897c",
+        "timestamp": "2026-11-07T16:03:34.499672"
+      }
+    ],
+    "created_at": "2026-11-07T16:03:34.491014",
+    "updated_at": "2026-11-07T16:03:34.499686"
+  },
+  "46e92d1c-76e1-4e3f-ba7e-9f6b8e92f2e0": {
+    "id": "46e92d1c-76e1-4e3f-ba7e-9f6b8e92f2e0",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Calculate compound interest on 1000...",
+    "messages": [
+      {
+        "id": "1cfde67b-e7d4-4d42-a7ae-6cb5047c63d1",
+        "role": "user",
+        "content": "Calculate compound interest on 10000 at 5% for 3 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7f8852b0-d555-4d88-a3a5-e145d025811b",
+        "timestamp": "2026-11-07T16:03:48.198144"
+      },
+      {
+        "id": "bbd6d56d-314d-402e-963a-f75d78cc648e",
+        "role": "assistant",
+        "content": "The calculated **Future Value** is **11576.25**.",
+        "sql": "SELECT ROUND(10000 * POWER(1.0 + (5 / 100.0), 3), 2) AS future_value;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 81.1%).",
+        "columns": [
+          "future_value"
+        ],
+        "rows": [
+          {
+            "future_value": "11576.25"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 51.46,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7f8852b0-d555-4d88-a3a5-e145d025811b",
+        "timestamp": "2026-11-07T16:03:48.267817"
+      }
+    ],
+    "created_at": "2026-11-07T16:03:48.195820",
+    "updated_at": "2026-11-07T16:03:48.267839"
+  },
+  "096d7023-89a7-4f90-927c-dae44db41ac8": {
+    "id": "096d7023-89a7-4f90-927c-dae44db41ac8",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Show passing students",
+    "messages": [
+      {
+        "id": "c4cba7f4-c0f0-4663-abf3-bdf3fac73fbf",
+        "role": "user",
+        "content": "Show passing students",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "8caf90e0-8cdb-4564-bfb3-59e3a81e4be5",
+        "timestamp": "2026-11-07T16:04:04.230023"
+      },
+      {
+        "id": "b798502b-495c-48d8-9a42-efeafd518593",
+        "role": "assistant",
+        "content": "What minimum score defines a passing mark?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "What minimum score defines a passing mark?",
+          "ambiguity_type": "missing_filter",
+          "options": [
+            {
+              "id": "opt_pass_40",
+              "label": "Passing mark >= 40 (Minimum Pass)",
+              "description": null,
+              "implied_filter_or_metric": "score >= 40"
+            },
+            {
+              "id": "opt_pass_50",
+              "label": "Passing mark >= 50 (Standard Pass)",
+              "description": null,
+              "implied_filter_or_metric": "score >= 50"
+            },
+            {
+              "id": "opt_pass_60",
+              "label": "Passing mark >= 60 (First-Class Pass)",
+              "description": null,
+              "implied_filter_or_metric": "score >= 60"
+            },
+            {
+              "id": "opt_pass_all",
+              "label": "All students regardless of score",
+              "description": null,
+              "implied_filter_or_metric": "1=1"
+            }
+          ],
+          "allow_free_text": true
+        },
+        "session_id": "8caf90e0-8cdb-4564-bfb3-59e3a81e4be5",
+        "timestamp": "2026-11-07T16:04:04.232711"
+      }
+    ],
+    "created_at": "2026-11-07T16:04:04.226856",
+    "updated_at": "2026-11-07T16:04:04.232724"
+  },
+  "4e14bb5a-44e2-487a-8849-d96ffe86acc3": {
+    "id": "4e14bb5a-44e2-487a-8849-d96ffe86acc3",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "a990fd07-da85-4208-9590-f5512442a9cf",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "fdf94b82-9f5e-417c-9245-b610fa077f12",
+        "timestamp": "2026-11-07T16:21:58.352810"
+      },
+      {
+        "id": "5f3fdce5-2eac-4ed8-b14e-b15b2f7630d0",
+        "role": "assistant",
+        "content": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+          "ambiguity_type": "missing_filter",
+          "options": [
+            {
+              "id": "opt_match_winners",
+              "label": "Show match winners and their best bowling figures",
+              "description": "Lists the match winners and the best bowling performance recorded in those matches.",
+              "implied_filter_or_metric": null
+            },
+            {
+              "id": "opt_none",
+              "label": "Cancel request",
+              "description": "No further action.",
+              "implied_filter_or_metric": null
+            }
+          ],
+          "allow_free_text": false
+        },
+        "session_id": "fdf94b82-9f5e-417c-9245-b610fa077f12",
+        "timestamp": "2026-11-07T16:22:02.172823"
+      }
+    ],
+    "created_at": "2026-11-07T16:21:58.343732",
+    "updated_at": "2026-11-07T16:22:02.172837"
+  },
+  "c0dbce29-0771-4c66-91eb-da5c57e69963": {
+    "id": "c0dbce29-0771-4c66-91eb-da5c57e69963",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "3f079812-f242-49f4-90d4-800483cbc974",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "53cce371-d81c-467f-bfa1-3c456914b850",
+        "timestamp": "2026-11-07T16:22:15.318970"
+      },
+      {
+        "id": "5ba1c1e3-692f-4bb7-9c8e-e967a02a9313",
+        "role": "assistant",
+        "content": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+          "ambiguity_type": "missing_filter",
+          "options": [
+            {
+              "id": "opt_match_winners",
+              "label": "Show match winners and their best bowling figures",
+              "description": "Lists the match winners and the best bowling performance recorded in those matches.",
+              "implied_filter_or_metric": null
+            },
+            {
+              "id": "opt_none",
+              "label": "Cancel request",
+              "description": "No further action.",
+              "implied_filter_or_metric": null
+            }
+          ],
+          "allow_free_text": false
+        },
+        "session_id": "53cce371-d81c-467f-bfa1-3c456914b850",
+        "timestamp": "2026-11-07T16:22:18.209967"
+      }
+    ],
+    "created_at": "2026-11-07T16:22:15.316071",
+    "updated_at": "2026-11-07T16:22:18.209987"
+  },
+  "75b1c3f2-23e3-43af-bb33-f86bee611e68": {
+    "id": "75b1c3f2-23e3-43af-bb33-f86bee611e68",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "573230aa-9d84-4cba-b5b0-a8a655779b3f",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e8257110-6c3b-4283-8db0-230427fed77d",
+        "timestamp": "2026-11-07T16:22:35.754984"
+      },
+      {
+        "id": "d80535ea-a24f-4632-bc20-1d3e3354c277",
+        "role": "assistant",
+        "content": "Query returned: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 79.4%).",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 102.61,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e8257110-6c3b-4283-8db0-230427fed77d",
+        "timestamp": "2026-11-07T16:22:35.929948"
+      }
+    ],
+    "created_at": "2026-11-07T16:22:35.749885",
+    "updated_at": "2026-11-07T16:22:35.929963"
+  },
+  "ea2f7811-52e8-466d-8f38-d61a815ab46b": {
+    "id": "ea2f7811-52e8-466d-8f38-d61a815ab46b",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "381fa0b3-7c6d-4dea-a53f-f94ddbd2fadd",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "f36243b4-04b0-450f-8677-39fec9f37e9f",
+        "timestamp": "2026-11-07T16:29:08.510178"
+      },
+      {
+        "id": "a2b8b562-5c38-487b-b581-ee702945c37d",
+        "role": "assistant",
+        "content": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+          "ambiguity_type": "missing_filter",
+          "options": [
+            {
+              "id": "opt_match_winners",
+              "label": "Show match winners and their best bowling figures",
+              "description": "Lists the match winners and the best bowling performance recorded in those matches.",
+              "implied_filter_or_metric": null
+            },
+            {
+              "id": "opt_none",
+              "label": "Cancel request",
+              "description": "No further action.",
+              "implied_filter_or_metric": null
+            }
+          ],
+          "allow_free_text": false
+        },
+        "session_id": "f36243b4-04b0-450f-8677-39fec9f37e9f",
+        "timestamp": "2026-11-07T16:29:12.087891"
+      }
+    ],
+    "created_at": "2026-11-07T16:29:08.503614",
+    "updated_at": "2026-11-07T16:29:12.087905"
+  },
+  "4cb8220f-0da4-49e3-84b6-e779efbf09f3": {
+    "id": "4cb8220f-0da4-49e3-84b6-e779efbf09f3",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "fe249a78-209b-43c6-8fb6-533039437cfe",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "844114c3-2a52-4ef5-853c-53760527aa51",
+        "timestamp": "2026-11-07T16:29:20.298265"
+      },
+      {
+        "id": "0b77e495-7d4a-4d6b-837f-db60db1ba725",
+        "role": "assistant",
+        "content": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "The current database only tracks match-level summaries and does not contain the granular player-level bowling data required to calculate economy and strike rates. Would you like to query the available match-level statistics instead?",
+          "ambiguity_type": "missing_filter",
+          "options": [
+            {
+              "id": "opt_match_winners",
+              "label": "Show match winners and their best bowling figures",
+              "description": "Lists the match winners and the best bowling performance recorded in those matches.",
+              "implied_filter_or_metric": null
+            },
+            {
+              "id": "opt_none",
+              "label": "Cancel request",
+              "description": "No further action.",
+              "implied_filter_or_metric": null
+            }
+          ],
+          "allow_free_text": false
+        },
+        "session_id": "844114c3-2a52-4ef5-853c-53760527aa51",
+        "timestamp": "2026-11-07T16:29:23.667689"
+      }
+    ],
+    "created_at": "2026-11-07T16:29:20.295679",
+    "updated_at": "2026-11-07T16:29:23.667699"
+  },
+  "7b0f6316-1273-4ee7-8cea-6ffda310a38c": {
+    "id": "7b0f6316-1273-4ee7-8cea-6ffda310a38c",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "give the highest wicket taker with ...",
+    "messages": [
+      {
+        "id": "e8f1719b-f80e-4b42-ba67-505c4c9557a7",
+        "role": "user",
+        "content": "give the highest wicket taker with his season economy average overall and strike rate",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "ae29d867-0ec0-4ac3-9fd7-f51a30941056",
+        "timestamp": "2026-11-07T16:35:55.539610"
+      },
+      {
+        "id": "315ec096-dfa6-4f88-a936-c2dc73c5df76",
+        "role": "assistant",
+        "content": "Query returned: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 79.4%).",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 135.01,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "ae29d867-0ec0-4ac3-9fd7-f51a30941056",
+        "timestamp": "2026-11-07T16:35:55.798160"
+      }
+    ],
+    "created_at": "2026-11-07T16:35:55.520675",
+    "updated_at": "2026-11-07T16:35:55.798190"
+  },
+  "e7ecb639-9247-41ba-8895-87aa2e63e8ac": {
+    "id": "e7ecb639-9247-41ba-8895-87aa2e63e8ac",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Calculate loan EMI for 500000 at 8....",
+    "messages": [
+      {
+        "id": "c6bf737f-3cf0-45ec-9118-e857a1d008aa",
+        "role": "user",
+        "content": "Calculate loan EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "0b6d44db-84cf-4838-8388-cad4976a8b30",
+        "timestamp": "2026-11-07T16:57:32.239091"
+      },
+      {
+        "id": "05eb008f-2bb0-4fac-a331-bf4d6b815459",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 87.9%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.11,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "0b6d44db-84cf-4838-8388-cad4976a8b30",
+        "timestamp": "2026-11-07T16:57:32.271709"
+      },
+      {
+        "id": "629e660f-907c-4613-909a-9896cf93ccba",
+        "role": "user",
+        "content": "Show students with score > 80",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "c44c7564-0e96-41f1-8cce-9bf92c614c6c",
+        "timestamp": "2026-11-07T16:57:32.321495"
+      },
+      {
+        "id": "455caa6f-5e1e-49dd-a522-8970d69c944d",
+        "role": "assistant",
+        "content": "The query returned **5** matching record(s). Top result: **92**.",
+        "sql": "SELECT score FROM marks JOIN students ON marks.student_id = students.id WHERE score > 80;",
+        "sql_explanation": "Retrieved `score` from `marks`. Filtered where `score` > 80.",
+        "columns": [
+          "score"
+        ],
+        "rows": [
+          {
+            "score": 92
+          },
+          {
+            "score": 88.5
+          },
+          {
+            "score": 98
+          },
+          {
+            "score": 84
+          },
+          {
+            "score": 81
+          }
+        ],
+        "row_count": 5,
+        "execution_time_ms": 0.08,
+        "relationships": [
+          "INNER JOIN students ON marks.student_id = students.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "c44c7564-0e96-41f1-8cce-9bf92c614c6c",
+        "timestamp": "2026-11-07T16:57:32.339658"
+      },
+      {
+        "id": "e538e942-6a6e-4dac-a691-62ea94c95800",
+        "role": "user",
+        "content": "Now show only those with attendance above 75",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "303b28b8-d211-4289-9e04-cb74975433e1",
+        "timestamp": "2026-11-07T16:57:32.346722"
+      },
+      {
+        "id": "aea31745-c6ee-4692-98d6-5930d3cd99c1",
+        "role": "assistant",
+        "content": "Execution error: Query Execution Error: no such column: score",
+        "sql": "SELECT id, name, score, attendance_percentage FROM students WHERE attendance_percentage > 75;",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "303b28b8-d211-4289-9e04-cb74975433e1",
+        "timestamp": "2026-11-07T16:57:32.357387"
+      }
+    ],
+    "created_at": "2026-11-07T16:57:32.224855",
+    "updated_at": "2026-11-07T16:57:32.357399"
+  },
+  "6af5379a-4b9b-4331-b655-9d273d75a04c": {
+    "id": "6af5379a-4b9b-4331-b655-9d273d75a04c",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Calculate net run rate with 180 run...",
+    "messages": [
+      {
+        "id": "23d1a01f-7c1f-4664-9fa5-d9aa5988ae00",
+        "role": "user",
+        "content": "Calculate net run rate with 180 runs in 20 overs scored and 150 runs in 20 overs conceded",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "33faf390-2e80-471c-8ff1-f45d6c351c03",
+        "timestamp": "2026-11-07T16:57:32.306027"
+      },
+      {
+        "id": "18e5967f-db1f-45cc-896f-2bf9f1128d41",
+        "role": "assistant",
+        "content": "The calculated **Net Run Rate** is **1.50**.",
+        "sql": "SELECT ROUND((180 * 1.0 / 20) - (150 * 1.0 / 20), 3) AS net_run_rate;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 82.1%).",
+        "columns": [
+          "net_run_rate"
+        ],
+        "rows": [
+          {
+            "net_run_rate": 1.5
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.06,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "33faf390-2e80-471c-8ff1-f45d6c351c03",
+        "timestamp": "2026-11-07T16:57:32.314293"
+      }
+    ],
+    "created_at": "2026-11-07T16:57:32.302290",
+    "updated_at": "2026-11-07T16:57:32.314302"
+  },
+  "82c84e5d-4f33-4945-a8ad-946e4482d956": {
+    "id": "82c84e5d-4f33-4945-a8ad-946e4482d956",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Calculate loan EMI for 500000 at 8....",
+    "messages": [
+      {
+        "id": "5cad4bac-8ac9-4849-a142-8e4334e907a0",
+        "role": "user",
+        "content": "Calculate loan EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "0bf81c3f-1b98-424b-b919-6b51d6a80378",
+        "timestamp": "2026-11-07T16:58:44.506786"
+      },
+      {
+        "id": "9b14e53d-ee81-42f8-8fac-9acdf396df89",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 91.9%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 1.2,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "0bf81c3f-1b98-424b-b919-6b51d6a80378",
+        "timestamp": "2026-11-07T16:58:44.555437"
+      },
+      {
+        "id": "3fec470f-6263-4ede-b698-a1144b4f0b1e",
+        "role": "user",
+        "content": "Show students with attendance_percentage > 80",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "cd131a82-6c83-44cb-a34a-d3158e13e78d",
+        "timestamp": "2026-11-07T16:58:44.590268"
+      },
+      {
+        "id": "69451a4a-bf42-4bb8-a0cb-090abf5f5e45",
+        "role": "assistant",
+        "content": "The query returned **4** matching record(s). Top result: **Aarav Sharma**.",
+        "sql": "SELECT name, attendance_percentage FROM students WHERE attendance_percentage > 80;",
+        "sql_explanation": "Retrieved `name, attendance_percentage` from `students`. Filtered where `attendance_percentage` > 80.",
+        "columns": [
+          "name",
+          "attendance_percentage"
+        ],
+        "rows": [
+          {
+            "name": "Aarav Sharma",
+            "attendance_percentage": 94.5
+          },
+          {
+            "name": "Priya Patel",
+            "attendance_percentage": 88
+          },
+          {
+            "name": "Rohan Verma",
+            "attendance_percentage": 96
+          },
+          {
+            "name": "Kavya Nair",
+            "attendance_percentage": 91
+          }
+        ],
+        "row_count": 4,
+        "execution_time_ms": 0.09,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "cd131a82-6c83-44cb-a34a-d3158e13e78d",
+        "timestamp": "2026-11-07T16:58:44.616180"
+      },
+      {
+        "id": "1e64e845-b49c-4126-8bda-7026b9854f51",
+        "role": "user",
+        "content": "Now show only those with attendance above 85",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d8fca443-cb57-4bf6-b18c-49e2cc28464c",
+        "timestamp": "2026-11-07T16:58:44.670903"
+      },
+      {
+        "id": "c7171d7f-c1d2-4ff6-b6a7-77876909083d",
+        "role": "assistant",
+        "content": "The query returned **4** matching record(s). Top result: **Aarav Sharma**.",
+        "sql": "SELECT name, attendance_percentage FROM students WHERE attendance_percentage > 85;",
+        "sql_explanation": "Retrieved `name, attendance_percentage` from `students`. Filtered where `attendance_percentage` > 85. Continued context from students.",
+        "columns": [
+          "name",
+          "attendance_percentage"
+        ],
+        "rows": [
+          {
+            "name": "Aarav Sharma",
+            "attendance_percentage": 94.5
+          },
+          {
+            "name": "Priya Patel",
+            "attendance_percentage": 88
+          },
+          {
+            "name": "Rohan Verma",
+            "attendance_percentage": 96
+          },
+          {
+            "name": "Kavya Nair",
+            "attendance_percentage": 91
+          }
+        ],
+        "row_count": 4,
+        "execution_time_ms": 0.11,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d8fca443-cb57-4bf6-b18c-49e2cc28464c",
+        "timestamp": "2026-11-07T16:58:44.683209"
+      }
+    ],
+    "created_at": "2026-11-07T16:58:44.499450",
+    "updated_at": "2026-11-07T16:58:44.683224"
+  },
+  "cf19dea5-81a8-4709-a4f1-4cd50fb969ee": {
+    "id": "cf19dea5-81a8-4709-a4f1-4cd50fb969ee",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "Calculate net run rate with 180 run...",
+    "messages": [
+      {
+        "id": "b13396f3-da5f-4309-b071-9c1863e790b5",
+        "role": "user",
+        "content": "Calculate net run rate with 180 runs in 20 overs scored and 150 runs in 20 overs conceded",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "aeff4b5b-73d7-40ed-9526-0ce2a2edcb84",
+        "timestamp": "2026-11-07T16:58:44.573323"
+      },
+      {
+        "id": "fa00e9b0-e2e2-478b-be1c-d83196c69075",
+        "role": "assistant",
+        "content": "The calculated **Net Run Rate** is **1.50**.",
+        "sql": "SELECT ROUND((180 * 1.0 / 20) - (150 * 1.0 / 20), 3) AS net_run_rate;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 82.1%).",
+        "columns": [
+          "net_run_rate"
+        ],
+        "rows": [
+          {
+            "net_run_rate": 1.5
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.08,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "aeff4b5b-73d7-40ed-9526-0ce2a2edcb84",
+        "timestamp": "2026-11-07T16:58:44.583058"
+      }
+    ],
+    "created_at": "2026-11-07T16:58:44.567401",
+    "updated_at": "2026-11-07T16:58:44.583067"
+  },
+  "47fc0fa0-b1c9-4023-95ea-0bdad909764a": {
+    "id": "47fc0fa0-b1c9-4023-95ea-0bdad909764a",
+    "user_id": "ff05a9e4-7a0c-4e04-a358-51e4b6591cc8",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "d9b36c96-9c4b-4e9f-98bd-9fe956f8dd07",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b898ca9e-23c2-4a33-b63e-245f9a874dc8",
+        "timestamp": "2026-11-09T14:32:27.176303"
+      },
+      {
+        "id": "aa014719-4015-4c09-9b6c-16e5db4e6a92",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "b898ca9e-23c2-4a33-b63e-245f9a874dc8",
+        "timestamp": "2026-11-09T14:32:27.186145"
+      }
+    ],
+    "created_at": "2026-11-09T14:32:27.169452",
+    "updated_at": "2026-11-09T14:32:27.186161"
+  },
+  "098fbd2c-bfb7-40e4-8c0a-fe8fa7ca2841": {
+    "id": "098fbd2c-bfb7-40e4-8c0a-fe8fa7ca2841",
+    "user_id": "ff05a9e4-7a0c-4e04-a358-51e4b6591cc8",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "07890eee-d98c-4acf-a4d3-1da07a0acb97",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "60018596-d7bd-49bc-bdbd-abeb8690055a",
+        "timestamp": "2026-11-09T14:32:27.195461"
+      },
+      {
+        "id": "e7a3c636-9f66-402c-a623-ee96fb8a83cd",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 93.3%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.71,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "60018596-d7bd-49bc-bdbd-abeb8690055a",
+        "timestamp": "2026-11-09T14:32:27.235221"
+      }
+    ],
+    "created_at": "2026-11-09T14:32:27.190375",
+    "updated_at": "2026-11-09T14:32:27.235231"
+  },
+  "7a5031cf-1934-42e0-a8a0-14c7572d4877": {
+    "id": "7a5031cf-1934-42e0-a8a0-14c7572d4877",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "average marks by department",
+    "messages": [
+      {
+        "id": "1b26c274-bacf-4064-a4a7-2081f2ba8981",
+        "role": "user",
+        "content": "average marks by department",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e42108f8-4c53-4ce2-99f5-83de9b69b19b",
+        "timestamp": "2026-11-09T14:40:23.276318"
+      },
+      {
+        "id": "29f7f044-3f35-4bbb-8bec-4ec6f299997f",
+        "role": "assistant",
+        "content": "The query returned **3** matching record(s). Top result: **Data Science**.",
+        "sql": "SELECT departments.name AS departments_name, ROUND(AVG(marks.score), 2) AS avg_score FROM marks JOIN students ON marks.student_id = students.id JOIN departments ON students.department_id = departments.id GROUP BY departments.name ORDER BY 2 DESC;",
+        "sql_explanation": "Computed AVG of `marks.score`.",
+        "columns": [
+          "departments_name",
+          "avg_score"
+        ],
+        "rows": [
+          {
+            "departments_name": "Data Science",
+            "avg_score": 91.0
+          },
+          {
+            "departments_name": "Computer Science",
+            "avg_score": 85.5
+          },
+          {
+            "departments_name": "Mechanical Engineering",
+            "avg_score": 81.0
+          }
+        ],
+        "row_count": 3,
+        "execution_time_ms": 9.14,
+        "relationships": [
+          "INNER JOIN students ON marks.student_id = students.id",
+          "INNER JOIN departments ON students.department_id = departments.id",
+          "students.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e42108f8-4c53-4ce2-99f5-83de9b69b19b",
+        "timestamp": "2026-11-09T14:40:23.337831"
+      }
+    ],
+    "created_at": "2026-11-09T14:40:23.269875",
+    "updated_at": "2026-11-09T14:40:23.337844"
+  },
+  "7276554a-0c95-48b8-bba4-0e967f200ce8": {
+    "id": "7276554a-0c95-48b8-bba4-0e967f200ce8",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "count of matches won by CSK",
+    "messages": [
+      {
+        "id": "19f1ecc3-b3ad-4e91-8236-dfc6c32689df",
+        "role": "user",
+        "content": "count of matches won by CSK",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "62ddaadf-f5a1-469f-afcb-f8cf59ecf28a",
+        "timestamp": "2026-11-09T14:40:23.350615"
+      },
+      {
+        "id": "22578a6f-8025-4c7b-ad68-e3f6913c08a6",
+        "role": "assistant",
+        "content": "The calculated **Total Count** is **2**.",
+        "sql": "SELECT COUNT(*) AS total_count FROM ipl WHERE match_winner = 'Chennai Super Kings';",
+        "sql_explanation": "Count of records in `ipl`. Filtered where `match_winner` = 'Chennai Super Kings'.",
+        "columns": [
+          "total_count"
+        ],
+        "rows": [
+          {
+            "total_count": 2
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.1,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "62ddaadf-f5a1-469f-afcb-f8cf59ecf28a",
+        "timestamp": "2026-11-09T14:40:23.362896"
+      }
+    ],
+    "created_at": "2026-11-09T14:40:23.345734",
+    "updated_at": "2026-11-09T14:40:23.362909"
+  },
+  "423e5274-caee-4f63-af88-85618bf68c17": {
+    "id": "423e5274-caee-4f63-af88-85618bf68c17",
+    "user_id": "0692fb9a-fa4a-4cc6-9734-831bdbfb83ab",
+    "title": "show all students",
+    "messages": [
+      {
+        "id": "368bba0e-f684-420d-bff0-af55edd4764b",
+        "role": "user",
+        "content": "show all students",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "f68b2004-6dbf-47f8-b1ff-682ec67d0a8f",
+        "timestamp": "2026-11-09T14:40:23.481511"
+      },
+      {
+        "id": "bc32c0c3-c6db-4570-8bc7-9ceb50536e55",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "f68b2004-6dbf-47f8-b1ff-682ec67d0a8f",
+        "timestamp": "2026-11-09T14:40:23.486898"
+      }
+    ],
+    "created_at": "2026-11-09T14:40:23.475881",
+    "updated_at": "2026-11-09T14:40:23.486914"
+  },
+  "48d7bb42-06e2-446c-9d2e-d560470164df": {
+    "id": "48d7bb42-06e2-446c-9d2e-d560470164df",
+    "user_id": "0692fb9a-fa4a-4cc6-9734-831bdbfb83ab",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "bf891039-6380-4908-a64e-7002ff952d24",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "11e01bd4-863d-4bb3-9f14-2d3dbf796566",
+        "timestamp": "2026-11-09T14:40:23.496282"
+      },
+      {
+        "id": "87419bb5-c73b-4234-9622-036f108f3498",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 94.0%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.23,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "11e01bd4-863d-4bb3-9f14-2d3dbf796566",
+        "timestamp": "2026-11-09T14:40:23.509318"
+      }
+    ],
+    "created_at": "2026-11-09T14:40:23.491548",
+    "updated_at": "2026-11-09T14:40:23.509330"
+  },
+  "d352c3ce-89fc-493c-96a7-df312c7d3fc9": {
+    "id": "d352c3ce-89fc-493c-96a7-df312c7d3fc9",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "average marks by department",
+    "messages": [
+      {
+        "id": "78f463ad-072e-4c6f-a34a-0f382812b731",
+        "role": "user",
+        "content": "average marks by department",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7dcc82f3-3c98-4174-996f-8467a5675496",
+        "timestamp": "2026-11-09T14:41:47.849050"
+      },
+      {
+        "id": "489f17be-e7c8-48bd-87bf-31542c888a61",
+        "role": "assistant",
+        "content": "The query returned **3** matching record(s). Top result: **Data Science**.",
+        "sql": "SELECT departments.name AS departments_name, ROUND(AVG(marks.score), 2) AS avg_score FROM marks JOIN students ON marks.student_id = students.id JOIN departments ON students.department_id = departments.id GROUP BY departments.name ORDER BY 2 DESC;",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 82.1%).",
+        "columns": [
+          "departments_name",
+          "avg_score"
+        ],
+        "rows": [
+          {
+            "departments_name": "Data Science",
+            "avg_score": 91.0
+          },
+          {
+            "departments_name": "Computer Science",
+            "avg_score": 85.5
+          },
+          {
+            "departments_name": "Mechanical Engineering",
+            "avg_score": 81.0
+          }
+        ],
+        "row_count": 3,
+        "execution_time_ms": 0.18,
+        "relationships": [
+          "INNER JOIN students ON marks.student_id = students.id",
+          "INNER JOIN departments ON students.department_id = departments.id",
+          "students.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7dcc82f3-3c98-4174-996f-8467a5675496",
+        "timestamp": "2026-11-09T14:41:47.894424"
+      }
+    ],
+    "created_at": "2026-11-09T14:41:47.843156",
+    "updated_at": "2026-11-09T14:41:47.894436"
+  },
+  "79fedd9c-54ee-4c12-ad20-3f02e5dcf107": {
+    "id": "79fedd9c-54ee-4c12-ad20-3f02e5dcf107",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "count of matches won by CSK",
+    "messages": [
+      {
+        "id": "74cc16f8-cd81-4f6a-884a-e60feb7aedf5",
+        "role": "user",
+        "content": "count of matches won by CSK",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e74f9f42-c0a9-4b55-a025-4231016f278b",
+        "timestamp": "2026-11-09T14:41:47.908656"
+      },
+      {
+        "id": "d9c7e3a0-9ba4-4d13-ad53-61cc1bda8f34",
+        "role": "assistant",
+        "content": "The calculated **Total Count** is **2**.",
+        "sql": "SELECT COUNT(*) AS total_count FROM ipl WHERE match_winner = 'Chennai Super Kings';",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 81.7%).",
+        "columns": [
+          "total_count"
+        ],
+        "rows": [
+          {
+            "total_count": 2
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.08,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e74f9f42-c0a9-4b55-a025-4231016f278b",
+        "timestamp": "2026-11-09T14:41:47.920244"
+      }
+    ],
+    "created_at": "2026-11-09T14:41:47.903323",
+    "updated_at": "2026-11-09T14:41:47.920254"
+  },
+  "bc97d884-89c9-4f1e-a06b-b23a8732bc14": {
+    "id": "bc97d884-89c9-4f1e-a06b-b23a8732bc14",
+    "user_id": "83c73f2a-9592-42ed-97eb-2ad12b41a156",
+    "title": "show all students",
+    "messages": [
+      {
+        "id": "ccc162a7-5ed4-4182-af5d-9ac192205d05",
+        "role": "user",
+        "content": "show all students",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "aca2871b-481a-42a7-b6fe-b167b2bc04b7",
+        "timestamp": "2026-11-09T14:41:48.022369"
+      },
+      {
+        "id": "623b1eef-e9ae-4fa3-9d70-ad7f8533c63f",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "aca2871b-481a-42a7-b6fe-b167b2bc04b7",
+        "timestamp": "2026-11-09T14:41:48.028120"
+      }
+    ],
+    "created_at": "2026-11-09T14:41:48.017576",
+    "updated_at": "2026-11-09T14:41:48.028139"
+  },
+  "9149692c-5e62-48e9-b407-6b28033b4d5c": {
+    "id": "9149692c-5e62-48e9-b407-6b28033b4d5c",
+    "user_id": "83c73f2a-9592-42ed-97eb-2ad12b41a156",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "10d99f26-6037-459d-85d6-9c5241265b80",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d55391e7-6957-42bf-81f1-99db262cbefc",
+        "timestamp": "2026-11-09T14:41:48.038678"
+      },
+      {
+        "id": "ed4fb554-dab6-49a2-804f-082724019acb",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 94.0%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.07,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d55391e7-6957-42bf-81f1-99db262cbefc",
+        "timestamp": "2026-11-09T14:41:48.049870"
+      }
+    ],
+    "created_at": "2026-11-09T14:41:48.033653",
+    "updated_at": "2026-11-09T14:41:48.049879"
+  },
+  "699b864b-da4b-44a5-aa51-6fa0cd5451f0": {
+    "id": "699b864b-da4b-44a5-aa51-6fa0cd5451f0",
+    "user_id": "83c73f2a-9592-42ed-97eb-2ad12b41a156",
+    "title": "total revenue from alex_sales",
+    "messages": [
+      {
+        "id": "0dcf3cf9-3e6a-4c94-ae63-835c08fad286",
+        "role": "user",
+        "content": "total revenue from alex_sales",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9bfb3c44-f709-4c53-9447-13812f572874",
+        "timestamp": "2026-11-09T14:41:48.070132"
+      },
+      {
+        "id": "75e0c442-5d24-47e9-a8ab-227a147acdb4",
+        "role": "assistant",
+        "content": "The calculated **Sum Revenue** is **2,500**.",
+        "sql": "SELECT SUM(revenue) AS sum_revenue FROM alex_sales;",
+        "sql_explanation": "Computed SUM of `revenue`.",
+        "columns": [
+          "sum_revenue"
+        ],
+        "rows": [
+          {
+            "sum_revenue": 2500
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.08,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9bfb3c44-f709-4c53-9447-13812f572874",
+        "timestamp": "2026-11-09T14:41:48.082567"
+      }
+    ],
+    "created_at": "2026-11-09T14:41:48.063029",
+    "updated_at": "2026-11-09T14:41:48.082579"
+  },
+  "ecc13d2c-2d5c-4ea2-a446-743fd6b7e1db": {
+    "id": "ecc13d2c-2d5c-4ea2-a446-743fd6b7e1db",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "average marks by department",
+    "messages": [
+      {
+        "id": "0d3dbe7f-9aeb-40b6-b0aa-b0ae0f74ed50",
+        "role": "user",
+        "content": "average marks by department",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b6c7123f-74d1-4d1e-8e74-8f000a15adab",
+        "timestamp": "2026-11-09T14:44:45.158100"
+      },
+      {
+        "id": "d8e2b94a-494c-4e9c-a136-83adb85b49ec",
+        "role": "assistant",
+        "content": "The query returned **3** matching record(s). Top result: **Data Science**.",
+        "sql": "SELECT departments.name AS departments_name, ROUND(AVG(marks.score), 2) AS avg_score FROM marks JOIN students ON marks.student_id = students.id JOIN departments ON students.department_id = departments.id GROUP BY departments.name ORDER BY 2 DESC;",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 88.8%).",
+        "columns": [
+          "departments_name",
+          "avg_score"
+        ],
+        "rows": [
+          {
+            "departments_name": "Data Science",
+            "avg_score": 91.0
+          },
+          {
+            "departments_name": "Computer Science",
+            "avg_score": 85.5
+          },
+          {
+            "departments_name": "Mechanical Engineering",
+            "avg_score": 81.0
+          }
+        ],
+        "row_count": 3,
+        "execution_time_ms": 0.27,
+        "relationships": [
+          "INNER JOIN students ON marks.student_id = students.id",
+          "INNER JOIN departments ON students.department_id = departments.id",
+          "students.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b6c7123f-74d1-4d1e-8e74-8f000a15adab",
+        "timestamp": "2026-11-09T14:44:45.217183"
+      }
+    ],
+    "created_at": "2026-11-09T14:44:45.148218",
+    "updated_at": "2026-11-09T14:44:45.217197"
+  },
+  "50855ea2-e74f-49c7-8a3c-c0390c9bf302": {
+    "id": "50855ea2-e74f-49c7-8a3c-c0390c9bf302",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "count of matches won by CSK",
+    "messages": [
+      {
+        "id": "d1ef7c99-1942-47f7-bc1d-a5290c458232",
+        "role": "user",
+        "content": "count of matches won by CSK",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e7a14bc6-4e30-41ad-8e09-b0f1ae598472",
+        "timestamp": "2026-11-09T14:44:45.241415"
+      },
+      {
+        "id": "6c476176-8876-4388-aa2e-d66edce0a89c",
+        "role": "assistant",
+        "content": "The calculated **Total Count** is **2**.",
+        "sql": "SELECT COUNT(*) AS total_count FROM ipl WHERE match_winner = 'Chennai Super Kings';",
+        "sql_explanation": "Generated from learned pattern (intent: TOP_N_RANK, confidence: 88.6%).",
+        "columns": [
+          "total_count"
+        ],
+        "rows": [
+          {
+            "total_count": 2
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.09,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e7a14bc6-4e30-41ad-8e09-b0f1ae598472",
+        "timestamp": "2026-11-09T14:44:45.257046"
+      },
+      {
+        "id": "f5285085-0b95-4572-a8cf-741f1cd740e9",
+        "role": "user",
+        "content": "Calculate the average strike rate of CSK throughout the sseason",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "49c70fc4-1c34-42e4-9266-a48b811034f8",
+        "timestamp": "2026-11-09T15:14:48.384967"
+      },
+      {
+        "id": "eb3a57d3-1b4f-4f1f-a311-81e3b934d501",
+        "role": "assistant",
+        "content": "The calculated **Avg First Ings Score** is **None**.",
+        "sql": "SELECT AVG(first_ings_score) AS avg_first_ings_score FROM ipl WHERE (team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings');",
+        "sql_explanation": "Computed AVG of `first_ings_score`. Retained filter `(team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings')` from context.",
+        "columns": [
+          "avg_first_ings_score"
+        ],
+        "rows": [
+          {
+            "avg_first_ings_score": null
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 266.58,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "49c70fc4-1c34-42e4-9266-a48b811034f8",
+        "timestamp": "2026-11-09T15:14:48.786110"
+      },
+      {
+        "id": "3bd1459e-9786-4b0a-a405-f813ea438706",
+        "role": "user",
+        "content": "Calculate the bowling average strike rate of CSK throughout the season",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e4bc0a0e-4339-4449-a827-585b1ee3ac64",
+        "timestamp": "2026-11-09T15:15:21.860190"
+      },
+      {
+        "id": "26fb41fc-d69d-48b0-af65-f658e7a8e763",
+        "role": "assistant",
+        "content": "Calculated Result: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Ranked metrics for `ipl`. Filtered where `best_bowling_figure` LIKE '%--%'.",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 114.36,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "e4bc0a0e-4339-4449-a827-585b1ee3ac64",
+        "timestamp": "2026-11-09T15:15:22.017051"
+      },
+      {
+        "id": "b34e0beb-7fa0-4e44-a4fe-b83e947d879f",
+        "role": "user",
+        "content": "Calculate the bowling average strike rate of CSK throughout the season",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9b969ee4-0d2d-4380-beaa-7660a59e6a8a",
+        "timestamp": "2026-11-09T15:19:50.116127"
+      },
+      {
+        "id": "9aa4404d-d9b7-40d7-9ff1-4d439ca71900",
+        "role": "assistant",
+        "content": "Calculated Result: **Bowler**: Yuzvendra Chahal, **Best Bowler Matches**: 5, **Total Wickets**: 17, **Runs Conceded**: 146, **Bowling Average**: 8.59.",
+        "sql": "SELECT best_bowling AS bowler, COUNT(*) AS best_bowler_matches, SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int) AS total_wickets, SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) AS runs_conceded, ROUND(SUM(SPLIT_PART(best_bowling_figure, '--', 2)::numeric) / NULLIF(SUM(SPLIT_PART(best_bowling_figure, '--', 1)::int), 0), 2) AS bowling_average FROM ipl WHERE best_bowling_figure LIKE '%--%' GROUP BY best_bowling ORDER BY total_wickets DESC LIMIT 1;",
+        "sql_explanation": "Ranked metrics for `ipl`. Filtered where `best_bowling_figure` LIKE '%--%'.",
+        "columns": [
+          "bowler",
+          "best_bowler_matches",
+          "total_wickets",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "bowler": "Yuzvendra Chahal",
+            "best_bowler_matches": 5,
+            "total_wickets": 17,
+            "runs_conceded": "146",
+            "bowling_average": "8.59"
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 158.5,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9b969ee4-0d2d-4380-beaa-7660a59e6a8a",
+        "timestamp": "2026-11-09T15:19:50.313362"
+      },
+      {
+        "id": "5e1148a8-ca4a-4841-a7e5-03d91adc0c61",
+        "role": "user",
+        "content": "Show summary and sample rows from ipl",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6bd35680-81fe-4d8b-a59b-6b5c42f16235",
+        "timestamp": "2026-11-09T15:19:59.856766"
+      },
+      {
+        "id": "94167ae4-452a-4b2f-8ffa-c6a36a665093",
+        "role": "assistant",
+        "content": "Could you please clarify what you mean by 'summary'? For example, would you like to see match counts by team, average scores by venue, or something else? I can also provide a few sample rows alongside the summary.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "awaiting_clarification",
+        "clarification": {
+          "question": "Could you please clarify what you mean by 'summary'? For example, would you like to see match counts by team, average scores by venue, or something else? I can also provide a few sample rows alongside the summary.",
+          "ambiguity_type": "unclear_aggregation",
+          "options": [
+            {
+              "id": "opt_match_counts",
+              "label": "Match counts by team",
+              "description": "Shows the total number of matches played by each team.",
+              "implied_filter_or_metric": null
+            },
+            {
+              "id": "opt_avg_scores",
+              "label": "Average first innings scores by venue",
+              "description": "Shows the average first innings score for each venue.",
+              "implied_filter_or_metric": null
+            }
+          ],
+          "allow_free_text": true
+        },
+        "session_id": "6bd35680-81fe-4d8b-a59b-6b5c42f16235",
+        "timestamp": "2026-11-09T15:20:05.141635"
+      },
+      {
+        "id": "876e84c9-aa18-4d68-b944-bf798efc0531",
+        "role": "user",
+        "content": "Selected: Average first innings scores by venue",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6bd35680-81fe-4d8b-a59b-6b5c42f16235",
+        "timestamp": "2026-11-09T15:20:11.000545"
+      },
+      {
+        "id": "13eb0351-dade-4830-ab2d-d338f2245066",
+        "role": "assistant",
+        "content": "The average first innings scores by venue are: Wankhede Stadium (166.76), Brabourne Stadium (177.25), Dr DY Patil Sports Academy (170.70), Maharashtra Cricket Association Stadium (171.46), Eden Gardens (197.50), and Narendra Modi Stadium (143.50). Sample match data includes matches 1 through 5, featuring teams such as Chennai vs. Kolkata, Delhi vs. Mumbai, and Banglore vs. Punjab.",
+        "sql": "WITH venue_summary AS (SELECT venue, ROUND(AVG(first_ings_score), 2) AS avg_first_innings_score FROM ipl GROUP BY venue), sample_rows AS (SELECT * FROM ipl LIMIT 5) SELECT vs.venue, vs.avg_first_innings_score, sr.match_id, sr.team1, sr.team2 FROM venue_summary vs LEFT JOIN sample_rows sr ON vs.venue = sr.venue",
+        "sql_explanation": "The query uses a Common Table Expression (CTE) to calculate the average first innings score per venue. It then joins this summary with a sample of 5 rows from the ipl table to provide both the requested summary statistics and the sample data.",
+        "columns": [
+          "venue",
+          "avg_first_innings_score",
+          "match_id",
+          "team1",
+          "team2"
+        ],
+        "rows": [
+          {
+            "venue": "Wankhede Stadium, Mumbai",
+            "avg_first_innings_score": "166.76",
+            "match_id": 1,
+            "team1": "Chennai",
+            "team2": "Kolkata"
+          },
+          {
+            "venue": "Brabourne Stadium, Mumbai",
+            "avg_first_innings_score": "177.25",
+            "match_id": 2,
+            "team1": "Delhi",
+            "team2": "Mumbai"
+          },
+          {
+            "venue": "Dr DY Patil Sports Academy, Mumbai",
+            "avg_first_innings_score": "170.70",
+            "match_id": 3,
+            "team1": "Banglore",
+            "team2": "Punjab"
+          },
+          {
+            "venue": "Wankhede Stadium, Mumbai",
+            "avg_first_innings_score": "166.76",
+            "match_id": 4,
+            "team1": "Gujarat",
+            "team2": "Lucknow"
+          },
+          {
+            "venue": "Maharashtra Cricket Association Stadium,Pune",
+            "avg_first_innings_score": "171.46",
+            "match_id": 5,
+            "team1": "Hyderabad",
+            "team2": "Rajasthan"
+          }
+        ],
+        "row_count": 7,
+        "execution_time_ms": 92.83,
+        "relationships": [
+          "LEFT JOIN sample_rows ON vs.venue = sr.venue"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6bd35680-81fe-4d8b-a59b-6b5c42f16235",
+        "timestamp": "2026-11-09T15:20:27.764542"
+      }
+    ],
+    "created_at": "2026-11-09T14:44:45.230908",
+    "updated_at": "2026-11-09T15:20:27.764566"
+  },
+  "13d71e59-6755-4d17-b84e-8d414b0fa68f": {
+    "id": "13d71e59-6755-4d17-b84e-8d414b0fa68f",
+    "user_id": "d5f682e3-ab4f-406c-9a68-55ed4dcebf03",
+    "title": "show all students",
+    "messages": [
+      {
+        "id": "a8b17788-e599-48e0-b0c7-ebaf32123a8d",
+        "role": "user",
+        "content": "show all students",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "f7870307-4b67-464e-8600-c36f55bd748f",
+        "timestamp": "2026-11-09T14:44:45.403279"
+      },
+      {
+        "id": "d38809a7-b140-4fef-8997-53176e4a9381",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "f7870307-4b67-464e-8600-c36f55bd748f",
+        "timestamp": "2026-11-09T14:44:45.414938"
+      }
+    ],
+    "created_at": "2026-11-09T14:44:45.394342",
+    "updated_at": "2026-11-09T14:44:45.414961"
+  },
+  "06f0aeb1-49d6-4719-828e-a46cdf51cffe": {
+    "id": "06f0aeb1-49d6-4719-828e-a46cdf51cffe",
+    "user_id": "d5f682e3-ab4f-406c-9a68-55ed4dcebf03",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "cee66e2e-1c24-4b99-becd-41d2241dca7f",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7746949e-802c-47b3-82a8-cf1359dadeef",
+        "timestamp": "2026-11-09T14:44:45.430992"
+      },
+      {
+        "id": "aa03b1b3-b35c-424b-93c6-37d2c8256f64",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 95.9%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.09,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "7746949e-802c-47b3-82a8-cf1359dadeef",
+        "timestamp": "2026-11-09T14:44:45.447904"
+      }
+    ],
+    "created_at": "2026-11-09T14:44:45.423560",
+    "updated_at": "2026-11-09T14:44:45.447917"
+  },
+  "ae96054c-bc9b-4117-a062-b30cac559070": {
+    "id": "ae96054c-bc9b-4117-a062-b30cac559070",
+    "user_id": "d5f682e3-ab4f-406c-9a68-55ed4dcebf03",
+    "title": "total revenue from alex_sales",
+    "messages": [
+      {
+        "id": "8f4b02f8-9b8e-4c29-bb0e-72e5d29a0065",
+        "role": "user",
+        "content": "total revenue from alex_sales",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "23821315-dc59-4ec3-a8bb-a535e1066d33",
+        "timestamp": "2026-11-09T14:44:45.481407"
+      },
+      {
+        "id": "59e19a56-bc4b-4d14-959a-9b1efaa3cded",
+        "role": "assistant",
+        "content": "The calculated **Sum Revenue** is **2,500**.",
+        "sql": "SELECT SUM(revenue) AS sum_revenue FROM alex_sales;",
+        "sql_explanation": "Generated from learned pattern (intent: AGGREGATE_SUM, confidence: 78.2%).",
+        "columns": [
+          "sum_revenue"
+        ],
+        "rows": [
+          {
+            "sum_revenue": 2500
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.08,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "23821315-dc59-4ec3-a8bb-a535e1066d33",
+        "timestamp": "2026-11-09T14:44:45.497646"
+      }
+    ],
+    "created_at": "2026-11-09T14:44:45.468771",
+    "updated_at": "2026-11-09T14:44:45.497658"
+  },
+  "6b95baad-4163-420c-8462-24099070ec57": {
+    "id": "6b95baad-4163-420c-8462-24099070ec57",
+    "user_id": "ad93a286-ff15-4efb-8470-913879d535dc",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "2f4185b1-2afc-47b5-951e-9222ba836d0a",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "3be28b7d-b67f-4447-97f1-5259b1a40ba2",
+        "timestamp": "2026-11-09T14:45:04.769139"
+      },
+      {
+        "id": "b6bc752d-96ba-4723-9d74-5fe8bfff7969",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "3be28b7d-b67f-4447-97f1-5259b1a40ba2",
+        "timestamp": "2026-11-09T14:45:04.779353"
+      }
+    ],
+    "created_at": "2026-11-09T14:45:04.763065",
+    "updated_at": "2026-11-09T14:45:04.779370"
+  },
+  "25278edd-acc5-4391-9838-e1ccb2312b8e": {
+    "id": "25278edd-acc5-4391-9838-e1ccb2312b8e",
+    "user_id": "ad93a286-ff15-4efb-8470-913879d535dc",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "e7dd00a6-55cc-4b1d-aece-e2b6522318ba",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d6ada1a0-3fc8-4b0a-906a-1355540d540d",
+        "timestamp": "2026-11-09T14:45:04.794516"
+      },
+      {
+        "id": "b33391e6-e3ee-49e6-a858-daa640ae86db",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 95.9%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.1,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "d6ada1a0-3fc8-4b0a-906a-1355540d540d",
+        "timestamp": "2026-11-09T14:45:04.834188"
+      }
+    ],
+    "created_at": "2026-11-09T14:45:04.786425",
+    "updated_at": "2026-11-09T14:45:04.834198"
+  },
+  "eba06080-2d33-4440-86f2-2eb9213534df": {
+    "id": "eba06080-2d33-4440-86f2-2eb9213534df",
+    "user_id": "f248989f-a960-4791-9a1d-5a38df2d5f80",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "9da3486d-af22-482c-a6db-81e7303ba878",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "845b2277-dcb2-4942-abe3-8479f123f7a1",
+        "timestamp": "2026-11-09T15:05:54.021500"
+      },
+      {
+        "id": "326d05e8-e99e-46df-b55b-9734f1adea43",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "845b2277-dcb2-4942-abe3-8479f123f7a1",
+        "timestamp": "2026-11-09T15:05:54.039833"
+      }
+    ],
+    "created_at": "2026-11-09T15:05:54.012721",
+    "updated_at": "2026-11-09T15:05:54.039859"
+  },
+  "5ac32f44-6c1f-41de-a703-f31d4ae4db95": {
+    "id": "5ac32f44-6c1f-41de-a703-f31d4ae4db95",
+    "user_id": "f248989f-a960-4791-9a1d-5a38df2d5f80",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "06e35625-43a2-482b-9966-0be4439670cd",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "1fe94beb-c586-4b27-969b-47803c961a91",
+        "timestamp": "2026-11-09T15:05:54.057904"
+      },
+      {
+        "id": "17a63647-87b0-47c0-bce7-d9232ca4d429",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 95.4%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 1.07,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "1fe94beb-c586-4b27-969b-47803c961a91",
+        "timestamp": "2026-11-09T15:05:54.111241"
+      }
+    ],
+    "created_at": "2026-11-09T15:05:54.048867",
+    "updated_at": "2026-11-09T15:05:54.111262"
+  },
+  "b642a39c-1cb8-4e70-97eb-0e5849eb2d2b": {
+    "id": "b642a39c-1cb8-4e70-97eb-0e5849eb2d2b",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "calculate the average bowling strik...",
+    "messages": [
+      {
+        "id": "abdf0dee-bc5b-4d65-855c-097be28b06d4",
+        "role": "user",
+        "content": "calculate the average bowling strike of CSK thorughout the season using the IPL uploaded dataset",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "100b2773-5537-41b8-bb6d-1621cbb9fa65",
+        "timestamp": "2026-11-09T15:23:09.536718"
+      },
+      {
+        "id": "32b112d3-a0e7-4aff-aa8c-8e5abebccf17",
+        "role": "assistant",
+        "content": "Execution error: Query Execution Error: near \"FROM\": syntax error",
+        "sql": "SELECT 'Chennai Super Kings' AS team, COUNT(*) AS matches_played, COUNT(*) * 120 AS total_balls_bowled, SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)) AS wickets_taken, ROUND(CAST(COUNT(*) * 120 AS FLOAT) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS average_bowling_strike_rate, SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) AS runs_conceded, ROUND(SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS bowling_average FROM ipl WHERE (team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings') AND best_bowling_figure LIKE '%--%';",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "100b2773-5537-41b8-bb6d-1621cbb9fa65",
+        "timestamp": "2026-11-09T15:23:09.622452"
+      }
+    ],
+    "created_at": "2026-11-09T15:23:09.523693",
+    "updated_at": "2026-11-09T15:23:09.622470"
+  },
+  "318a3770-441c-4246-ab9a-053319e7daec": {
+    "id": "318a3770-441c-4246-ab9a-053319e7daec",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "calculate the average bowling strik...",
+    "messages": [
+      {
+        "id": "b5359893-1842-4f68-8bc9-d7e34dc04fcb",
+        "role": "user",
+        "content": "calculate the average bowling strike of CSK thorughout the season using the IPL uploaded dataset",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "52c9a709-9e36-408d-9668-9493fe1934a3",
+        "timestamp": "2026-11-09T15:23:31.085623"
+      },
+      {
+        "id": "f8cad000-4b97-40dd-a500-e206a84d3df7",
+        "role": "assistant",
+        "content": "Execution error: Query Execution Error: near \"FROM\": syntax error",
+        "sql": "SELECT 'Chennai Super Kings' AS team, COUNT(*) AS matches_played, COUNT(*) * 120 AS total_balls_bowled, SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)) AS wickets_taken, ROUND(CAST(COUNT(*) * 120 AS FLOAT) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS average_bowling_strike_rate, SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) AS runs_conceded, ROUND(SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS bowling_average FROM ipl WHERE (team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings') AND best_bowling_figure LIKE '%--%';",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "52c9a709-9e36-408d-9668-9493fe1934a3",
+        "timestamp": "2026-11-09T15:23:31.182655"
+      }
+    ],
+    "created_at": "2026-11-09T15:23:31.072692",
+    "updated_at": "2026-11-09T15:23:31.182669"
+  },
+  "ce203e5b-17cf-4b1f-8769-c8c22e4f7c58": {
+    "id": "ce203e5b-17cf-4b1f-8769-c8c22e4f7c58",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "calculate the average bowling strik...",
+    "messages": [
+      {
+        "id": "c62e32ae-619a-497f-b43d-0ee210e2f00d",
+        "role": "user",
+        "content": "calculate the average bowling strike of CSK thorughout the season using the IPL uploaded dataset",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "34688698-43a8-472d-b8be-6deee2307c8d",
+        "timestamp": "2026-11-09T15:23:53.413788"
+      },
+      {
+        "id": "9e903c31-53b8-4729-a63e-298ac166d368",
+        "role": "assistant",
+        "content": "Execution error: Query Execution Error: near \"FROM\": syntax error",
+        "sql": "SELECT 'Chennai Super Kings' AS team, COUNT(*) AS matches_played, COUNT(*) * 120 AS total_balls_bowled, SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)) AS wickets_taken, ROUND(CAST(COUNT(*) * 120 AS FLOAT) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS average_bowling_strike_rate, SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) AS runs_conceded, ROUND(SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS bowling_average FROM ipl WHERE (team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings') AND best_bowling_figure LIKE '%--%';",
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "34688698-43a8-472d-b8be-6deee2307c8d",
+        "timestamp": "2026-11-09T15:23:53.494796"
+      }
+    ],
+    "created_at": "2026-11-09T15:23:53.404321",
+    "updated_at": "2026-11-09T15:23:53.494812"
+  },
+  "cc654f68-5581-4be1-ab4b-543f5fa4a95b": {
+    "id": "cc654f68-5581-4be1-ab4b-543f5fa4a95b",
+    "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "title": "calculate the average bowling strik...",
+    "messages": [
+      {
+        "id": "b75e38f0-c791-442e-b0a0-9b4ee31387b5",
+        "role": "user",
+        "content": "calculate the average bowling strike of CSK thorughout the season using the IPL uploaded dataset",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "11a2a88a-c627-4363-a784-9ecf837655c8",
+        "timestamp": "2026-11-09T15:26:24.848366"
+      },
+      {
+        "id": "6f60a891-78ac-40a3-93dd-2d19a4d96725",
+        "role": "assistant",
+        "content": "Calculated Result: **Team**: Chennai Super Kings, **Matches Played**: 3, **Total Balls Bowled**: 360, **Wickets Taken**: 8, **Average Bowling Strike Rate**: 45.00, **Runs Conceded**: 80.00, **Bowling Average**: 10.00.",
+        "sql": "SELECT 'Chennai Super Kings' AS team, COUNT(*) AS matches_played, COUNT(*) * 120 AS total_balls_bowled, SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)) AS wickets_taken, ROUND(CAST(COUNT(*) * 120 AS FLOAT) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS average_bowling_strike_rate, SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) AS runs_conceded, ROUND(SUM(CAST(SUBSTR(best_bowling_figure, INSTR(best_bowling_figure, '--') + 2) AS NUMERIC)) / NULLIF(SUM(CAST(SUBSTR(best_bowling_figure, 1, INSTR(best_bowling_figure, '--') - 1) AS INTEGER)), 0), 2) AS bowling_average FROM ipl WHERE (team1 = 'Chennai Super Kings' OR team2 = 'Chennai Super Kings') AND best_bowling_figure LIKE '%--%';",
+        "sql_explanation": "Computed domain analytics and formula directly.",
+        "columns": [
+          "team",
+          "matches_played",
+          "total_balls_bowled",
+          "wickets_taken",
+          "average_bowling_strike_rate",
+          "runs_conceded",
+          "bowling_average"
+        ],
+        "rows": [
+          {
+            "team": "Chennai Super Kings",
+            "matches_played": 3,
+            "total_balls_bowled": 360,
+            "wickets_taken": 8,
+            "average_bowling_strike_rate": 45.0,
+            "runs_conceded": 80.0,
+            "bowling_average": 10.0
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.26,
+        "relationships": [
+          "students.department_id \u2192 departments.id",
+          "courses.department_id \u2192 departments.id",
+          "marks.student_id \u2192 students.id",
+          "marks.course_id \u2192 courses.id"
+        ],
+        "status": "success",
+        "clarification": null,
+        "session_id": "11a2a88a-c627-4363-a784-9ecf837655c8",
+        "timestamp": "2026-11-09T15:26:24.939080"
+      }
+    ],
+    "created_at": "2026-11-09T15:26:24.838953",
+    "updated_at": "2026-11-09T15:26:24.939096"
+  },
+  "29bf3a75-5d0f-4fce-bae7-4070098a0742": {
+    "id": "29bf3a75-5d0f-4fce-bae7-4070098a0742",
+    "user_id": "a29f366d-dc2e-48b3-b4b6-01747dff0b1d",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "5f765d3a-7f5a-4e75-b844-d5ba866f1829",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "b930b1d6-e919-4ff4-b702-586c7ef0abe8",
+        "timestamp": "2026-11-09T15:41:22.101814"
+      },
+      {
+        "id": "d2132752-5f76-4217-8e01-bf85c8e1cdda",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "b930b1d6-e919-4ff4-b702-586c7ef0abe8",
+        "timestamp": "2026-11-09T15:41:22.113048"
+      }
+    ],
+    "created_at": "2026-11-09T15:41:22.089433",
+    "updated_at": "2026-11-09T15:41:22.113072"
+  },
+  "059dcd53-9c3c-4012-9ba7-c8dcdca50963": {
+    "id": "059dcd53-9c3c-4012-9ba7-c8dcdca50963",
+    "user_id": "a29f366d-dc2e-48b3-b4b6-01747dff0b1d",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "7820cb2c-be07-4adb-9e0d-88b4a007f448",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6d29adb4-c15c-45c1-a055-bdae352cdfaa",
+        "timestamp": "2026-11-09T15:41:22.135987"
+      },
+      {
+        "id": "70fdada5-cf0d-41d2-b9d8-aa34d99da791",
+        "role": "assistant",
+        "content": "Analysis error: LLM Provider Error: [Errno 11001] getaddrinfo failed",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "error",
+        "clarification": null,
+        "session_id": "6d29adb4-c15c-45c1-a055-bdae352cdfaa",
+        "timestamp": "2026-11-09T15:41:23.392901"
+      }
+    ],
+    "created_at": "2026-11-09T15:41:22.122801",
+    "updated_at": "2026-11-09T15:41:23.392915"
+  },
+  "cdc2a218-864b-4e44-a9d6-409cdb5717e7": {
+    "id": "cdc2a218-864b-4e44-a9d6-409cdb5717e7",
+    "user_id": "7937c94f-5159-49ac-a5de-e4bdbdf1686c",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "a9548dab-cd4b-45eb-9f71-e10b680b2ce4",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "322cb9a2-e3d4-4ce8-899e-263e2b141a9c",
+        "timestamp": "2026-11-09T15:42:55.727257"
+      },
+      {
+        "id": "e47ace46-4a28-483c-84cb-5c92561dfde1",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "322cb9a2-e3d4-4ce8-899e-263e2b141a9c",
+        "timestamp": "2026-11-09T15:42:55.751516"
+      }
+    ],
+    "created_at": "2026-11-09T15:42:55.719724",
+    "updated_at": "2026-11-09T15:42:55.751532"
+  },
+  "83cdf066-768a-4df1-9181-5f87056d3470": {
+    "id": "83cdf066-768a-4df1-9181-5f87056d3470",
+    "user_id": "7937c94f-5159-49ac-a5de-e4bdbdf1686c",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "6aa54eeb-9a45-4f38-b538-75189fd88410",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "f7f49361-cd2d-4adb-b1dc-a69ecdb4ad72",
+        "timestamp": "2026-11-09T15:42:55.766770"
+      },
+      {
+        "id": "4ba0374b-99b3-4c74-9b8c-3c1683d09c5c",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 95.7%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 1.06,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "f7f49361-cd2d-4adb-b1dc-a69ecdb4ad72",
+        "timestamp": "2026-11-09T15:42:55.820108"
+      }
+    ],
+    "created_at": "2026-11-09T15:42:55.758005",
+    "updated_at": "2026-11-09T15:42:55.820118"
+  },
+  "077e9633-7a8a-46d3-a51e-d826949f08ee": {
+    "id": "077e9633-7a8a-46d3-a51e-d826949f08ee",
+    "user_id": "261c07f2-736b-46af-a572-752615d54a8f",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "ae90e11f-a551-477e-82ba-59c99937146a",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "22f04b52-5d06-47fc-9655-1533e6d93503",
+        "timestamp": "2026-11-09T15:45:48.931818"
+      },
+      {
+        "id": "bd505d4e-5145-4942-8227-36913175f393",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "22f04b52-5d06-47fc-9655-1533e6d93503",
+        "timestamp": "2026-11-09T15:45:48.946534"
+      }
+    ],
+    "created_at": "2026-11-09T15:45:48.919046",
+    "updated_at": "2026-11-09T15:45:48.946606"
+  },
+  "7cb887fa-d856-4f73-9de7-a724b61cf06d": {
+    "id": "7cb887fa-d856-4f73-9de7-a724b61cf06d",
+    "user_id": "261c07f2-736b-46af-a572-752615d54a8f",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "9e706430-519f-4eff-a07f-dc2aca3a5e82",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6d8a3572-8ab1-455c-9dca-c3f566fc540b",
+        "timestamp": "2026-11-09T15:45:48.969429"
+      },
+      {
+        "id": "0afcad7d-d234-408b-a1b6-b6853f1ddebf",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 96.1%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.73,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "6d8a3572-8ab1-455c-9dca-c3f566fc540b",
+        "timestamp": "2026-11-09T15:45:50.353557"
+      }
+    ],
+    "created_at": "2026-11-09T15:45:48.956061",
+    "updated_at": "2026-11-09T15:45:50.353568"
+  },
+  "87089628-2057-4979-915b-12622e5f6521": {
+    "id": "87089628-2057-4979-915b-12622e5f6521",
+    "user_id": "1e7781b4-cb6b-4522-a0ce-50ea4ad56165",
+    "title": "Show all students and departments",
+    "messages": [
+      {
+        "id": "d91ff5d2-86e8-4d26-ae82-8155dfe42346",
+        "role": "user",
+        "content": "Show all students and departments",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "52bdaded-c26f-4f0a-8109-06143530cc6b",
+        "timestamp": "2026-11-09T15:48:15.104344"
+      },
+      {
+        "id": "cdf63113-ff96-4944-82f1-641dfc2561bf",
+        "role": "assistant",
+        "content": "No database tables found in your workspace. Please upload a dataset (CSV, Excel, or JSON) using the **Upload Data** button above to begin querying your data.",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "no_dataset",
+        "clarification": null,
+        "session_id": "52bdaded-c26f-4f0a-8109-06143530cc6b",
+        "timestamp": "2026-11-09T15:48:15.118060"
+      }
+    ],
+    "created_at": "2026-11-09T15:48:15.090457",
+    "updated_at": "2026-11-09T15:48:15.118078"
+  },
+  "796074a7-c43b-44b1-9055-893a29d508a1": {
+    "id": "796074a7-c43b-44b1-9055-893a29d508a1",
+    "user_id": "1e7781b4-cb6b-4522-a0ce-50ea4ad56165",
+    "title": "calculate EMI for 500000 at 8.5% fo...",
+    "messages": [
+      {
+        "id": "b8b5f195-e803-4358-ae65-f2f6350975eb",
+        "role": "user",
+        "content": "calculate EMI for 500000 at 8.5% for 5 years",
+        "sql": null,
+        "sql_explanation": null,
+        "columns": [],
+        "rows": [],
+        "row_count": 0,
+        "execution_time_ms": 0.0,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9964a5b0-d485-48b0-8e52-64fc5de58efc",
+        "timestamp": "2026-11-09T15:48:15.141782"
+      },
+      {
+        "id": "c6a9104f-6293-4feb-b2b2-f652927166c8",
+        "role": "assistant",
+        "content": "The calculated **Monthly Emi** is **10,258.26**.",
+        "sql": "SELECT ROUND(500000.0 * ((0.00708333 * POWER(1.0 + 0.00708333, 60)) / (POWER(1.0 + 0.00708333, 60) - 1.0)), 2) AS monthly_emi;",
+        "sql_explanation": "Generated from learned pattern (intent: FORMULA_MATH, confidence: 96.4%).",
+        "columns": [
+          "monthly_emi"
+        ],
+        "rows": [
+          {
+            "monthly_emi": 10258.26
+          }
+        ],
+        "row_count": 1,
+        "execution_time_ms": 0.47,
+        "relationships": [],
+        "status": "success",
+        "clarification": null,
+        "session_id": "9964a5b0-d485-48b0-8e52-64fc5de58efc",
+        "timestamp": "2026-11-09T15:48:16.344808"
+      }
+    ],
+    "created_at": "2026-11-09T15:48:15.129933",
+    "updated_at": "2026-11-09T15:48:16.344841"
+  }
+}

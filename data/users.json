@@ -1,0 +1,50 @@
+{
+  "6efd7669-4cfc-4797-9c91-ef265161aa56": {
+    "id": "6efd7669-4cfc-4797-9c91-ef265161aa56",
+    "username": "raj",
+    "display_name": "Raj",
+    "email": "raj@example.com",
+    "salt": "06383dd67e86e9a8b5b814af5b214159",
+    "password_hash": "7e8d93d441e4a2274bb93081896db62c96d08797fa5ad1620652857b6c79305d",
+    "created_at": "2026-09-27T12:55:39.457740",
+    "uploaded_tables": [
+      {
+        "table_name": "test_users",
+        "filename": "test_users.csv",
+        "row_count": 2,
+        "column_count": 3,
+        "columns": [
+          "name",
+          "age",
+          "city"
+        ],
+        "uploaded_at": "2026-09-27T19:47:19.866873",
+        "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56"
+      },
+      {
+        "table_name": "single_dict",
+        "filename": "single_dict.json",
+        "row_count": 1,
+        "column_count": 2,
+        "columns": [
+          "a",
+          "b"
+        ],
+        "uploaded_at": "2026-09-27T19:48:43.032217",
+        "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56"
+      },
+      {
+        "table_name": "user_data",
+        "filename": "user_data.csv",
+        "row_count": 2,
+        "column_count": 2,
+        "columns": [
+          "name",
+          "age"
+        ],
+        "uploaded_at": "2026-09-27T19:49:00.499940",
+        "user_id": "6efd7669-4cfc-4797-9c91-ef265161aa56"
+      }
+    ]
+  }
+}

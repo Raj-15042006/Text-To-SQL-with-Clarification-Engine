@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClarifySQL</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="window">
+    <!-- Mobile Sidebar Backdrop -->
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
+    <!-- Sidebar: Tables & History -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="app-title">
+          <svg class="app-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+          </svg>
+          <h1>ClarifySQL</h1>
+        </div>
+        <button class="btn-icon mobile-only-btn" id="btn-close-sidebar" title="Close Sidebar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Top New Chat Action -->
+      <div class="sidebar-action-wrap">
+        <button class="btn-new-chat" id="btn-new-chat" title="Start New Conversation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>New Chat</span>
+        </button>
+      </div>
+
+      <!-- Segmented Control: Browse Chats vs Tables vs Relations -->
+      <div class="segmented-control">
+        <button class="seg-btn active" id="tab-chats">Chats</button>
+        <button class="seg-btn" id="tab-tables">Tables</button>
+        <button class="seg-btn" id="tab-relations">Relations</button>
+      </div>
+
+      <!-- Upload Dataset CTA Button -->
+      <div class="sidebar-upload-wrap">
+        <button class="btn-sidebar-upload" id="btn-open-upload" title="Upload Dataset (.csv, .tsv, .xlsx, .sql, .json, .parquet)">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Upload Dataset</span>
+          <span class="upload-badge">.csv .xlsx .json</span>
+        </button>
+      </div>
+
+      <!-- Chats Pane (Saved Conversations) -->
+      <div class="sidebar-pane" id="pane-chats">
+        <div class="pane-header">
+          <span class="pane-title">Saved Chats</span>
+          <button class="btn-text-subtle" id="btn-clear-all-chats" title="Clear all saved chats">Clear All</button>
+        </div>
+        <div class="chat-list" id="sidebar-chat-list">
+          <div class="loading-state">Loading chats...</div>
+        </div>
+      </div>
+
+      <!-- Tables Pane -->
+      <div class="sidebar-pane" id="pane-tables" style="display: none;">
+        <div class="pane-header">
+          <span class="pane-title">Database Tables</span>
+          <span class="pane-caption">Click to view data</span>
+        </div>
+        <div class="table-list" id="sidebar-table-list">
+          <div class="loading-state">Loading tables...</div>
+        </div>
+      </div>
+
+      <!-- Relations Pane -->
+      <div class="sidebar-pane" id="pane-relations" style="display: none;">
+        <div class="pane-header">
+          <span class="pane-title">Table Relationships</span>
+          <span class="pane-caption">Foreign Keys</span>
+        </div>
+        <div class="relation-list" id="sidebar-relation-list">
+          <div class="loading-state">Loading relationships...</div>
+        </div>
+      </div>
+
+      <!-- Sidebar Footer / Account & DB Status -->
+      <div class="sidebar-footer">
+        <div class="sidebar-account-row" id="sidebar-account-row">
+          <div class="account-avatar" id="sidebar-account-avatar">R</div>
+          <div class="account-meta">
+            <span class="account-name" id="sidebar-account-name">Raj</span>
+            <span class="account-email" id="sidebar-account-sub">0 uploaded datasets</span>
+          </div>
+          <button class="btn-icon btn-account-menu" id="btn-sidebar-account" title="Account & Saved Datasets">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+        </div>
+
+        <div class="db-indicator-row">
+          <span class="status-dot active" id="status-dot"></span>
+          <div class="db-info">
+            <span class="db-name" id="db-name-label">Sample Database</span>
+            <span class="db-type" id="db-type-label">Academic & Sales</span>
+          </div>
+          <button class="btn-icon" id="btn-open-settings" title="Database Settings">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="content-area">
+      <!-- Responsive Top Navigation Bar -->
+      <header class="top-nav-bar">
+        <div class="top-nav-left">
+          <button class="btn-icon" id="btn-toggle-sidebar" title="Toggle Sidebar">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+          </button>
+          <div class="nav-breadcrumbs">
+            <span class="nav-brand">ClarifySQL</span>
+            <span class="nav-sep">/</span>
+            <span class="nav-chat-title" id="nav-chat-title">New Conversation</span>
+          </div>
+        </div>
+
+        <div class="top-nav-right">
+          <!-- Active AI Model & Self-Learning Pill -->
+          <button class="btn-top-model-chip" id="top-btn-model" title="AI Engine & Self-Learning Model Status">
+            <span class="model-mode-dot" id="top-model-dot"></span>
+            <span class="model-mode-icon" id="top-model-icon">🤖</span>
+            <span class="model-name-text" id="top-model-name">Local NLP</span>
+            <span class="model-accuracy-badge" id="top-model-acc">100%</span>
+          </button>
+
+          <button class="btn-top-account" id="top-btn-account" title="Account, Saved Chats & Uploads">
+            <span class="user-avatar-pill" id="user-avatar-pill">R</span>
+            <span class="user-name-text" id="top-user-name">Raj</span>
+            <span class="user-uploads-badge" id="top-user-uploads-count">0 uploads</span>
+          </button>
+          <button class="btn-top-new-chat" id="top-btn-new-chat" title="Start New Chat">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>New Chat</span>
+          </button>
+          <button class="btn-top-upload" id="top-btn-upload" title="Upload Dataset (.csv, .xlsx, .sql)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+            <span>Upload Data</span>
+          </button>
+          <button class="btn-top-status-chip" id="top-btn-settings" title="Change Database Catalog">
+            <span class="status-dot active" id="top-status-dot"></span>
+            <span class="chip-text" id="top-db-name">Sample Catalog</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Scrollable Chat Stream Viewport -->
+      <div class="chat-viewport" id="chat-viewport">
+        <!-- Notification Bar (Sticky) -->
+        <div class="notification-bar" id="notification-bar" style="display: none;"></div>
+
+        <!-- Welcome Hero (Empty State) -->
+        <div class="chat-welcome-hero" id="chat-welcome-hero">
+          <div class="welcome-icon-wrap">
+            <svg class="welcome-icon" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+              <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+              <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+            </svg>
+          </div>
+          <h2>ClarifySQL Assistant</h2>
+          <p class="welcome-subtitle">
+            Universal AI for databases & formulas across every domain worldwide (Finance, Healthcare, Supply Chain, HR, STEM, Academics, Sports). All chats and uploaded datasets are saved with your account.
+          </p>
+          
+          <div class="hero-suggestions">
+            <span class="suggestions-label">Try asking across any domain:</span>
+            <div class="suggestion-grid">
+              <button class="quick-hero-card" data-q="Calculate Sharpe ratio for portfolio return 14%, risk-free rate 4%, standard deviation 8%">
+                <span class="card-emoji">💰</span>
+                <span class="card-title">Finance & Portfolio</span>
+                <span class="card-desc">Sharpe ratio, CAPM, WACC, loan EMI, CAGR, NPV</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate standard deviation of [12, 15, 18, 22, 29, 35]">
+                <span class="card-emoji">📊</span>
+                <span class="card-title">Statistical Equations</span>
+                <span class="card-desc">Std dev, variance, Z-score, Pearson correlation, Bayes</span>
+              </button>
+              <button class="quick-hero-card" data-q="Solve quadratic equation a=1, b=-5, c=6">
+                <span class="card-emoji">📐</span>
+                <span class="card-title">Mathematics & Algebra</span>
+                <span class="card-desc">Quadratic roots, nCr, nPr, trig, logs, determinants</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate kinetic energy for a 1200 kg vehicle traveling at 25 m/s">
+                <span class="card-emoji">⚡</span>
+                <span class="card-title">Physics & Mechanics</span>
+                <span class="card-desc">Kinetic/potential energy, momentum, ideal gas, Ohm's law</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate Customer Lifetime Value LTV for ARPU 120, gross margin 80%, churn rate 5%">
+                <span class="card-emoji">📈</span>
+                <span class="card-title">Business & SaaS Metrics</span>
+                <span class="card-desc">CAC, LTV, runway, burn rate, EOQ, break-even</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate movie box office ROI for budget 60M and box office 240M">
+                <span class="card-emoji">🎬</span>
+                <span class="card-title">Movies & Entertainment</span>
+                <span class="card-desc">Box office ROI, multiplier, domestic/intl split, streams</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate Haversine distance between 28.6139, 77.2090 and 19.0760, 72.8777">
+                <span class="card-emoji">🌍</span>
+                <span class="card-title">Geospatial & Geography</span>
+                <span class="card-desc">Haversine spherical distance, population density, map scale</span>
+              </button>
+              <button class="quick-hero-card" data-q="Calculate basketball True Shooting Percentage for 25 points, 15 FGA, 8 FTA">
+                <span class="card-emoji">🏆</span>
+                <span class="card-title">Multi-Sport Analytics</span>
+                <span class="card-desc">Cricket NRR & strike rate, basketball TS%, football PPM, pace</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chat Messages Timeline (Appends dynamically) -->
+        <div class="chat-thread" id="chat-thread"></div>
+
+        <!-- Live Loading Indicator Bubble -->
+        <div class="chat-loading-bubble" id="chat-loading-bubble" style="display: none;">
+          <div class="spinner-sm"></div>
+          <span id="loading-bubble-text">Compiling SQL & querying PostgreSQL...</span>
+        </div>
+      </div>
+
+      <!-- Pinned Modern AI Prompt Composer -->
+      <section class="composer-section">
+        <div class="prompt-composer">
+          <div class="composer-header">
+            <div class="composer-mode">
+              <span class="composer-pulse-dot"></span>
+              <span class="composer-mode-title" id="composer-mode-title">Natural Language SQL Assistant</span>
+              <span class="composer-badge">⚡ Context Continuation</span>
+            </div>
+            <button class="btn-composer-clear" id="btn-clear-prompt" title="Clear prompt" style="display: none;">
+              Clear
+            </button>
+          </div>
+
+          <div class="composer-body">
+            <textarea 
+              id="query-input" 
+              placeholder="Ask a question, request a formula (e.g. Net Run Rate, Compound Interest), or follow up on previous results..." 
+              rows="2"
+              autocomplete="off"
+              spellcheck="false"
+            ></textarea>
+          </div>
+
+          <div class="composer-footer">
+            <div class="composer-hints">
+              <span class="key-hint"><kbd>↵ Return</kbd> to run</span>
+              <span class="key-hint-sep">&middot;</span>
+              <span class="key-hint"><kbd>⇧ Shift + ↵</kbd> new line</span>
+            </div>
+            <button class="btn-run" id="btn-submit" title="Run Query">
+              <span id="btn-ask-text">Run</span>
+              <svg class="run-icon" id="run-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
+              <div class="spinner" id="spinner" style="display: none;"></div>
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Flagship Auth Gateway Modal (Sign In & Create Account) -->
+  <div class="modal-backdrop" id="auth-gateway-modal" style="display: none;">
+    <div class="apple-modal auth-gateway-dialog">
+      <div class="auth-gateway-header">
+        <div class="auth-brand-badge">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+          <span>Text-SQL AI Studio</span>
+        </div>
+        <h2 class="auth-gateway-title" id="auth-gw-title">Sign In to Your Workspace</h2>
+        <p class="auth-gateway-sub" id="auth-gw-sub">Isolated datasets, private conversation threads, and offline intelligence.</p>
+        
+        <div class="segmented-control auth-segmented" id="auth-gw-tabs">
+          <button class="seg-btn active" id="tab-gw-signin">Sign In</button>
+          <button class="seg-btn" id="tab-gw-register">Create Account</button>
+        </div>
+      </div>
+
+      <div class="modal-body auth-gw-body">
+        <!-- Sign In Form -->
+        <div class="auth-gw-pane" id="pane-gw-signin">
+          <div class="field-item">
+            <label for="gw-login-user">Username</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <input type="text" id="gw-login-user" placeholder="e.g. raj" autocomplete="username">
+            </div>
+          </div>
+          <div class="field-item">
+            <label for="gw-login-pass">Password</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <input type="password" id="gw-login-pass" placeholder="••••••••" autocomplete="current-password">
+            </div>
+          </div>
+          <div class="test-result" id="gw-login-error" style="display: none;"></div>
+          <button class="btn btn-primary btn-block btn-lg" id="btn-gw-do-login">Sign In</button>
+
+          <!-- Quick Test Drive Demo Chip -->
+          <div class="demo-account-box">
+            <div class="demo-box-header">
+              <span class="demo-badge">⚡ Quick Test Drive</span>
+              <span class="demo-caption">1-Click Demo Login</span>
+            </div>
+            <button class="demo-user-card" id="btn-gw-demo-raj" type="button">
+              <div class="demo-user-avatar">R</div>
+              <div class="demo-user-info">
+                <span class="demo-user-name">Raj (Full Demo Workspace)</span>
+                <span class="demo-user-desc">Restores all 17 previous chats & datasets (IPL, University, Sales)</span>
+              </div>
+              <span class="demo-enter-arrow">→</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Create Account Form -->
+        <div class="auth-gw-pane" id="pane-gw-register" style="display: none;">
+          <div class="field-item">
+            <label for="gw-reg-user">Username (Unique identifier)</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+              <input type="text" id="gw-reg-user" placeholder="e.g. alex" autocomplete="off">
+            </div>
+          </div>
+          <div class="field-item">
+            <label for="gw-reg-name">Display Name</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              <input type="text" id="gw-reg-name" placeholder="e.g. Alex Rivera" autocomplete="off">
+            </div>
+          </div>
+          <div class="field-item">
+            <label for="gw-reg-email">Email Address (Optional)</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+              <input type="email" id="gw-reg-email" placeholder="alex@company.com" autocomplete="off">
+            </div>
+          </div>
+          <div class="field-item">
+            <label for="gw-reg-pass">Password</label>
+            <div class="input-with-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+              <input type="password" id="gw-reg-pass" placeholder="At least 4 characters" autocomplete="new-password">
+            </div>
+          </div>
+          <div class="tenancy-notice">
+            <span class="shield-icon">🛡️</span>
+            <span>New accounts start in a pristine private workspace with <strong>0 datasets</strong> and <strong>0 chats</strong>. Ingest your own data when ready.</span>
+          </div>
+          <div class="test-result" id="gw-reg-error" style="display: none;"></div>
+          <button class="btn btn-primary btn-block btn-lg" id="btn-gw-do-register">Create Account & Launch</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Sheet (macOS Modal) -->
+  <div class="modal-backdrop" id="settings-modal" style="display: none;">
+    <div class="apple-modal">
+      <div class="modal-header">
+        <h3>Database Settings</h3>
+        <button class="btn-close" id="btn-close-settings">&times;</button>
+      </div>
+      <div class="modal-body">
+        <label class="field-label">Active Catalog:</label>
+        <div class="segmented-control modal-seg">
+          <button class="seg-btn active" id="modal-opt-sample">Sample University & Sales</button>
+          <button class="seg-btn" id="modal-opt-postgres">Local PostgreSQL</button>
+        </div>
+
+        <div id="pg-config-section" style="display: none;">
+          <div class="field-grid">
+            <div class="field-item">
+              <label>Host</label>
+              <input type="text" id="cfg-host" value="localhost">
+            </div>
+            <div class="field-item">
+              <label>Port</label>
+              <input type="number" id="cfg-port" value="5432">
+            </div>
+          </div>
+          <div class="field-item">
+            <label>Database</label>
+            <input type="text" id="cfg-dbname" value="postgres">
+          </div>
+          <div class="field-grid">
+            <div class="field-item">
+              <label>User</label>
+              <input type="text" id="cfg-user" value="postgres">
+            </div>
+            <div class="field-item">
+              <label>Password</label>
+              <input type="password" id="cfg-password" value="postgres">
+            </div>
+          </div>
+        </div>
+
+        <div class="test-result" id="modal-test-result" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-test-conn">Test Connection</button>
+        <button class="btn btn-primary" id="btn-save-conn">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Upload Dataset Sheet (macOS Modal) -->
+  <div class="modal-backdrop" id="upload-modal" style="display: none;">
+    <div class="apple-modal upload-dialog">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>Upload & Ingest Dataset</h3>
+          <p class="modal-subtitle">Directly convert .csv, .tsv, .xlsx, .xls, .sql, .json, or .parquet files into queryable database tables.</p>
+        </div>
+        <button class="btn-close" id="btn-close-upload">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="upload-dropzone" id="upload-dropzone">
+          <input type="file" id="file-input" accept=".csv, .tsv, .txt, .xlsx, .xls, .sql, .json, .parquet" style="display: none;" />
+          <div class="dropzone-icon">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+              <polyline points="17 8 12 3 7 8"></polyline>
+              <line x1="12" y1="3" x2="12" y2="15"></line>
+            </svg>
+          </div>
+          <div class="dropzone-title">Drop your dataset here, or <span class="dropzone-browse">browse files</span></div>
+          <div class="dropzone-hint">Supports CSV/TSV, Excel spreadsheets (.xlsx, .xls), SQL dumps (.sql), JSON, and Parquet</div>
+          <div class="selected-file-badge" id="selected-file-badge" style="display: none;"></div>
+        </div>
+
+        <div class="field-item upload-table-field">
+          <label>Target Table Name (Optional)</label>
+          <input type="text" id="upload-target-table" placeholder="Auto-inferred from filename (e.g. sales_2024)" autocomplete="off">
+        </div>
+
+        <div class="test-result" id="upload-result-box" style="display: none;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-cancel-upload">Cancel</button>
+        <button class="btn btn-primary" id="btn-start-upload" disabled>
+          <span id="btn-upload-label">Ingest Dataset</span>
+          <div class="spinner" id="upload-spinner" style="display: none;"></div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account & Saved Data Modal -->
+  <div class="modal-backdrop" id="account-modal" style="display: none;">
+    <div class="apple-modal account-dialog">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>User Account & Cloud Workspace</h3>
+          <p class="modal-subtitle">All your chats and uploaded datasets are saved and associated with your account.</p>
+        </div>
+        <button class="btn-close" id="btn-close-account">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Account Tabs -->
+        <div class="segmented-control modal-seg" id="account-seg-control">
+          <button class="seg-btn active" id="tab-acc-profile">My Account</button>
+          <button class="seg-btn" id="tab-acc-uploads">Uploaded Data (<span id="tab-uploads-count">0</span>)</button>
+          <button class="seg-btn" id="tab-acc-switch">Switch Account</button>
+          <button class="seg-btn" id="tab-acc-register">New User</button>
+        </div>
+
+        <!-- Pane 1: Profile & Overview -->
+        <div class="account-pane" id="pane-acc-profile">
+          <div class="account-profile-card">
+            <div class="profile-avatar-lg" id="profile-modal-avatar">R</div>
+            <div class="profile-details">
+              <h4 id="profile-modal-display-name">Raj</h4>
+              <div class="profile-sub-badge" id="profile-modal-username">@raj</div>
+              <div class="profile-meta-line" id="profile-modal-email">raj@example.com</div>
+              <div class="profile-meta-line" id="profile-modal-stats">Saved Chats: <b id="stat-chats-count">0</b> &bull; Datasets: <b id="stat-tables-count">0</b></div>
+            </div>
+          </div>
+          <div class="account-actions-row">
+            <button class="btn btn-secondary btn-sm" id="btn-acc-logout">Sign Out / Switch</button>
+          </div>
+        </div>
+
+        <!-- Pane 2: User's Uploaded Datasets -->
+        <div class="account-pane" id="pane-acc-uploads" style="display: none;">
+          <div class="uploads-list-header">
+            <span class="pane-caption">Datasets permanently attached to this user account:</span>
+            <button class="btn btn-secondary btn-sm" id="btn-modal-open-upload">+ Ingest New Dataset</button>
+          </div>
+          <div class="account-uploads-list" id="account-uploads-list">
+            <div class="loading-state">Loading your datasets...</div>
+          </div>
+        </div>
+
+        <!-- Pane 3: Switch / Login View -->
+        <div class="account-pane" id="pane-acc-switch" style="display: none;">
+          <div class="existing-users-section">
+            <label class="field-label">Available Accounts:</label>
+            <div class="quick-user-chips" id="quick-user-chips">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+          <div class="divider-text"><span>Or sign in with password</span></div>
+          <div class="field-item">
+            <label>Username</label>
+            <input type="text" id="login-username" placeholder="e.g. raj" autocomplete="username">
+          </div>
+          <div class="field-item">
+            <label>Password</label>
+            <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <div class="test-result" id="login-result-box" style="display: none;"></div>
+          <div class="modal-footer-inner">
+            <button class="btn btn-primary" id="btn-do-login">Sign In</button>
+          </div>
+        </div>
+
+        <!-- Pane 4: Register New User View -->
+        <div class="account-pane" id="pane-acc-register" style="display: none;">
+          <div class="field-item">
+            <label>Username (Unique identifier)</label>
+            <input type="text" id="reg-username" placeholder="e.g. alex" autocomplete="off">
+          </div>
+          <div class="field-item">
+            <label>Display Name</label>
+            <input type="text" id="reg-display-name" placeholder="e.g. Alex Rivera" autocomplete="off">
+          </div>
+          <div class="field-item">
+            <label>Email (Optional)</label>
+            <input type="email" id="reg-email" placeholder="alex@example.com" autocomplete="off">
+          </div>
+          <div class="field-item">
+            <label>Password</label>
+            <input type="password" id="reg-password" placeholder="At least 4 characters" autocomplete="new-password">
+          </div>
+          <div class="test-result" id="reg-result-box" style="display: none;"></div>
+          <div class="modal-footer-inner">
+            <button class="btn btn-primary" id="btn-do-register">Create Account</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Model Engine & Self-Learning Dashboard Modal -->
+  <div class="modal-backdrop" id="model-modal" style="display: none;">
+    <div class="apple-modal model-dialog" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>AI Engine & Self-Learning System</h3>
+          <p class="modal-subtitle">Configure AI model engine, inspect self-learning memory, and train local weights offline.</p>
+        </div>
+        <button class="btn-close" id="btn-close-model">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Provider Selection Cards -->
+        <label class="field-label">Active Engine:</label>
+        <div class="model-options-grid">
+          <div class="model-card" id="card-provider-local" data-provider="local">
+            <div class="model-card-header">
+              <span class="model-card-icon">🤖</span>
+              <div class="model-card-title-group">
+                <span class="model-card-title">Local Self-Learning NLP</span>
+                <span class="model-card-badge local-badge">100% Offline & Private</span>
+              </div>
+              <span class="model-card-check" id="check-local">✓</span>
+            </div>
+            <p class="model-card-desc">Linguistic AST parsing, TF-IDF intent learning, domain formulas, and continuous reinforcement on CPU. Zero cloud API calls.</p>
+          </div>
+
+          <div class="model-card" id="card-provider-gemini" data-provider="gemini">
+            <div class="model-card-header">
+              <span class="model-card-icon">✨</span>
+              <div class="model-card-title-group">
+                <span class="model-card-title">Google Gemini 2.5 Flash</span>
+                <span class="model-card-badge cloud-badge">Cloud Generative AI</span>
+              </div>
+              <span class="model-card-check" id="check-gemini"></span>
+            </div>
+            <p class="model-card-desc">Deep generalist LLM reasoning with cloud schema mapping and multi-turn conversational SQL compilation.</p>
+          </div>
+        </div>
+
+        <!-- Learning Metrics Dashboard -->
+        <div class="model-metrics-card">
+          <div class="metrics-header">
+            <span class="metrics-title">Local Self-Learning Stats</span>
+            <span class="metrics-status-pill ready" id="model-metrics-status">Trained & Ready</span>
+          </div>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-val" id="metric-samples">20</span>
+              <span class="metric-lbl">Training Samples</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-accuracy">100%</span>
+              <span class="metric-lbl">Classification Acc</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-vocab">84</span>
+              <span class="metric-lbl">Vocabulary Terms</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-latency">&lt; 1ms</span>
+              <span class="metric-lbl">Inference Latency</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Retrain Trigger Action -->
+        <div class="model-retrain-action">
+          <div class="retrain-info">
+            <span class="retrain-title">Continuous Feedback Learning</span>
+            <span class="retrain-sub">Retrain TF-IDF & intent classifier weights on updated memory.</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-trigger-retrain">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span id="btn-retrain-label">Retrain Model</span>
+          </button>
+        </div>
+
+        <!-- Learned Memories Inspector -->
+        <div class="learned-memory-section">
+          <div class="learned-memory-header">
+            <span class="memory-section-title">Learned Training Memory</span>
+            <span class="memory-count-label" id="memory-count-label">Loading...</span>
+          </div>
+          <div class="learned-memory-list" id="learned-memory-list">
+            <div class="loading-state">Loading training memory...</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-close-model-footer">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
