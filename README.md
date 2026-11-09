@@ -127,7 +127,6 @@ flowchart TD
 │       └── files.py                # Dataset upload & management routes
 ├── data/
 │   ├── models/                     # Trained local TF-IDF & classifier joblib binaries
-│   └── power_bi_datasets/          # Generated enterprise datasets & DAX measures
 ├── frontend/
 │   ├── index.html                  # Responsive modern web interface
 │   ├── css/style.css               # Flagship dark/light theme styling
@@ -176,21 +175,6 @@ Copy the `.env.example` file to `.env`:
 ```bash
 cp .env.example .env
 ```
-
-Edit `.env` to configure your settings:
-```env
-# Optional: Set your Gemini API key (or use local offline mode)
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-3.1-flash-lite
-LLM_PROVIDER=local
-
-# Database Configuration (PostgreSQL local)
-DB_HOST=localhost
-DB_PORT=5432
-DB_NAME=postgres
-DB_USER=postgres
-DB_PASSWORD=admin
-ACTIVE_DATA_SOURCE=sample
 
 # Server Configuration
 HOST=127.0.0.1
