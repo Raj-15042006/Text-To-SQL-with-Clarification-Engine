@@ -1,0 +1,31 @@
+[
+  {
+    "id": "gls_seed_1",
+    "term": "Honor Roll Student",
+    "definition": "Students with attendance >= 90% and average score >= 85.",
+    "sql_expression": "students.attendance_percentage >= 90 AND marks.score >= 85",
+    "category": "entity",
+    "tables_related": [
+      "students",
+      "marks"
+    ],
+    "status": "approved",
+    "proposed_by": "system",
+    "approved_by": "admin",
+    "created_at": 1794304135.1741836
+  },
+  {
+    "id": "gls_seed_2",
+    "term": "High-Value Sale",
+    "definition": "Sales transactions exceeding $15,000 in revenue.",
+    "sql_expression": "revenue > 15000",
+    "category": "filter",
+    "tables_related": [
+      "sales"
+    ],
+    "status": "approved",
+    "proposed_by": "system",
+    "approved_by": "admin",
+    "created_at": 1794304135.174202
+  }
+]

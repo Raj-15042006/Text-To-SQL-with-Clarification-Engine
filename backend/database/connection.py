@@ -1,9 +1,10 @@
 import sqlite3
 import time
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 import psycopg
 from pydantic import BaseModel
-from backend.config import settings
+from backend.config import settings, BASE_DIR
 from backend.database.schema_extractor import DatabaseSchema, get_default_sample_schema, extract_postgresql_schema, extract_sqlite_schema
 
 class ExecutionResult(BaseModel):
@@ -33,20 +34,24 @@ class DatabaseManager:
                 self.get_schema(force_refresh=True)
 
     def _init_sample_database(self):
-        """Initializes in-memory SQLite database with sample tables and rows matching SRS examples."""
-        conn = sqlite3.connect(":memory:", check_same_thread=False)
+        """Initializes persistent SQLite warehouse (preserving uploaded datasets across restarts) and seeds sample tables if empty."""
+        data_dir = BASE_DIR / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        db_path = data_dir / "local_warehouse.db"
+
+        conn = sqlite3.connect(str(db_path), check_same_thread=False)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # Create sample tables
+        # Ensure sample tables exist
         cur.executescript("""
-        CREATE TABLE departments (
+        CREATE TABLE IF NOT EXISTS departments (
             id INTEGER PRIMARY KEY,
             name VARCHAR(100),
             code VARCHAR(10)
         );
 
-        CREATE TABLE students (
+        CREATE TABLE IF NOT EXISTS students (
             id INTEGER PRIMARY KEY,
             name VARCHAR(100),
             email VARCHAR(100),
@@ -57,7 +62,7 @@ class DatabaseManager:
             FOREIGN KEY (department_id) REFERENCES departments(id)
         );
 
-        CREATE TABLE courses (
+        CREATE TABLE IF NOT EXISTS courses (
             id INTEGER PRIMARY KEY,
             title VARCHAR(150),
             code VARCHAR(20),
@@ -66,7 +71,7 @@ class DatabaseManager:
             FOREIGN KEY (department_id) REFERENCES departments(id)
         );
 
-        CREATE TABLE marks (
+        CREATE TABLE IF NOT EXISTS marks (
             id INTEGER PRIMARY KEY,
             student_id INTEGER,
             course_id INTEGER,
@@ -78,7 +83,7 @@ class DatabaseManager:
             FOREIGN KEY (course_id) REFERENCES courses(id)
         );
 
-        CREATE TABLE sales (
+        CREATE TABLE IF NOT EXISTS sales (
             transaction_id INTEGER PRIMARY KEY,
             store_city VARCHAR(100),
             customer_city VARCHAR(100),
@@ -86,39 +91,6 @@ class DatabaseManager:
             units_sold INTEGER,
             transaction_date DATE
         );
-
-        -- Sample Data
-        INSERT INTO departments VALUES 
-            (1, 'Computer Science', 'CS'),
-            (2, 'Data Science', 'DS'),
-            (3, 'Mechanical Engineering', 'ME');
-
-        INSERT INTO students VALUES 
-            (101, 'Aarav Sharma', 'aarav@univ.edu', 1, 2022, 'Mumbai', 94.5),
-            (102, 'Priya Patel', 'priya@univ.edu', 1, 2022, 'Delhi', 88.0),
-            (103, 'Rohan Verma', 'rohan@univ.edu', 2, 2023, 'Bangalore', 96.0),
-            (104, 'Ananya Iyer', 'ananya@univ.edu', 2, 2023, 'Mumbai', 79.5),
-            (105, 'Kavya Nair', 'kavya@univ.edu', 3, 2021, 'Chennai', 91.0);
-
-        INSERT INTO courses VALUES 
-            (201, 'Database Systems', 'CS301', 1, 4),
-            (202, 'Machine Learning', 'DS401', 2, 4),
-            (203, 'Algorithms', 'CS201', 1, 3);
-
-        INSERT INTO marks VALUES 
-            (1, 101, 201, 4, 92.0, 100.0, 'A'),
-            (2, 101, 203, 4, 88.5, 100.0, 'B'),
-            (3, 102, 201, 4, 76.0, 100.0, 'C'),
-            (4, 103, 202, 2, 98.0, 100.0, 'A'),
-            (5, 104, 202, 2, 84.0, 100.0, 'B'),
-            (6, 105, 201, 6, 81.0, 100.0, 'B');
-
-        INSERT INTO sales VALUES 
-            (1, 'Mumbai', 'Mumbai', 15400.0, 12, '2024-01-15'),
-            (2, 'Delhi', 'Mumbai', 8900.0, 5, '2024-02-10'),
-            (3, 'Mumbai', 'Bangalore', 23100.0, 19, '2024-03-01'),
-            (4, 'Bangalore', 'Bangalore', 12500.0, 8, '2024-03-12'),
-            (5, 'Mumbai', 'Pune', 31200.0, 25, '2024-04-20');
 
         CREATE TABLE IF NOT EXISTS ipl (
             match_id INTEGER PRIMARY KEY,
@@ -139,14 +111,6 @@ class DatabaseManager:
             best_bowling_figure VARCHAR(50)
         );
 
-        INSERT INTO ipl VALUES
-            (1, 2023, 'Ahmedabad', 'Chennai Super Kings', 'Gujarat Titans', 'Chennai Super Kings', 'field', 'Chennai Super Kings', 'wickets', 5, 'Devon Conway', 'Narendra Modi Stadium', 'Devon Conway', 47, 'Ravindra Jadeja', '3--22'),
-            (2, 2023, 'Mumbai', 'Mumbai Indians', 'Royal Challengers Bangalore', 'Mumbai Indians', 'field', 'Mumbai Indians', 'wickets', 6, 'Suryakumar Yadav', 'Wankhede Stadium', 'Suryakumar Yadav', 83, 'Jason Behrendorff', '3--36'),
-            (3, 2023, 'Chennai', 'Chennai Super Kings', 'Kolkata Knight Riders', 'Chennai Super Kings', 'bat', 'Kolkata Knight Riders', 'wickets', 6, 'Rinku Singh', 'MA Chidambaram Stadium', 'Shivam Dube', 48, 'Varun Chakravarthy', '2--36'),
-            (4, 2023, 'Delhi', 'Delhi Capitals', 'Chennai Super Kings', 'Chennai Super Kings', 'bat', 'Chennai Super Kings', 'runs', 77, 'Ruturaj Gaikwad', 'Arun Jaitley Stadium', 'Ruturaj Gaikwad', 79, 'Deepak Chahar', '3--22'),
-            (5, 2023, 'Bangalore', 'Royal Challengers Bangalore', 'Gujarat Titans', 'Gujarat Titans', 'field', 'Gujarat Titans', 'wickets', 6, 'Shubman Gill', 'M Chinnaswamy Stadium', 'Shubman Gill', 104, 'Rashid Khan', '1--24'),
-            (6, 2023, 'Lucknow', 'Lucknow Super Giants', 'Mumbai Indians', 'Mumbai Indians', 'field', 'Mumbai Indians', 'runs', 81, 'Akash Madhwal', 'BRSABV Ekana Cricket Stadium', 'Cameron Green', 41, 'Akash Madhwal', '5--5');
-
         CREATE TABLE IF NOT EXISTS sarah_products (
             product_id INTEGER PRIMARY KEY,
             product_name VARCHAR(150),
@@ -154,17 +118,77 @@ class DatabaseManager:
             unit_price NUMERIC(10,2),
             inventory_count INTEGER
         );
-
-        INSERT INTO sarah_products VALUES
-            (1, 'MacBook Pro 16', 'Laptops', 2499.00, 45),
-            (2, 'iPhone 15 Pro Max', 'Smartphones', 1199.00, 120),
-            (3, 'AirPods Max', 'Audio', 549.00, 85),
-            (4, 'Studio Display 27', 'Monitors', 1599.00, 30),
-            (5, 'Magic Keyboard Touch ID', 'Accessories', 199.00, 210);
         """)
+
+        def _is_empty(tbl: str) -> bool:
+            cur.execute(f'SELECT COUNT(*) FROM "{tbl}";')
+            return (cur.fetchone()[0] or 0) == 0
+
+        if _is_empty("departments"):
+            cur.executescript("""
+            INSERT INTO departments VALUES 
+                (1, 'Computer Science', 'CS'),
+                (2, 'Data Science', 'DS'),
+                (3, 'Mechanical Engineering', 'ME');
+            """)
+        if _is_empty("students"):
+            cur.executescript("""
+            INSERT INTO students VALUES 
+                (101, 'Aarav Sharma', 'aarav@univ.edu', 1, 2022, 'Mumbai', 94.5),
+                (102, 'Priya Patel', 'priya@univ.edu', 1, 2022, 'Delhi', 88.0),
+                (103, 'Rohan Verma', 'rohan@univ.edu', 2, 2023, 'Bangalore', 96.0),
+                (104, 'Ananya Iyer', 'ananya@univ.edu', 2, 2023, 'Mumbai', 79.5),
+                (105, 'Kavya Nair', 'kavya@univ.edu', 3, 2021, 'Chennai', 91.0);
+            """)
+        if _is_empty("courses"):
+            cur.executescript("""
+            INSERT INTO courses VALUES 
+                (201, 'Database Systems', 'CS301', 1, 4),
+                (202, 'Machine Learning', 'DS401', 2, 4),
+                (203, 'Algorithms', 'CS201', 1, 3);
+            """)
+        if _is_empty("marks"):
+            cur.executescript("""
+            INSERT INTO marks VALUES 
+                (1, 101, 201, 4, 92.0, 100.0, 'A'),
+                (2, 101, 203, 4, 88.5, 100.0, 'B'),
+                (3, 102, 201, 4, 76.0, 100.0, 'C'),
+                (4, 103, 202, 2, 98.0, 100.0, 'A'),
+                (5, 104, 202, 2, 84.0, 100.0, 'B'),
+                (6, 105, 201, 6, 81.0, 100.0, 'B');
+            """)
+        if _is_empty("sales"):
+            cur.executescript("""
+            INSERT INTO sales VALUES 
+                (1, 'Mumbai', 'Mumbai', 15400.0, 12, '2024-01-15'),
+                (2, 'Delhi', 'Mumbai', 8900.0, 5, '2024-02-10'),
+                (3, 'Mumbai', 'Bangalore', 23100.0, 19, '2024-03-01'),
+                (4, 'Bangalore', 'Bangalore', 12500.0, 8, '2024-03-12'),
+                (5, 'Mumbai', 'Pune', 31200.0, 25, '2024-04-20');
+            """)
+        if _is_empty("ipl"):
+            cur.executescript("""
+            INSERT INTO ipl VALUES
+                (1, 2023, 'Ahmedabad', 'Chennai Super Kings', 'Gujarat Titans', 'Chennai Super Kings', 'field', 'Chennai Super Kings', 'wickets', 5, 'Devon Conway', 'Narendra Modi Stadium', 'Devon Conway', 47, 'Ravindra Jadeja', '3--22'),
+                (2, 2023, 'Mumbai', 'Mumbai Indians', 'Royal Challengers Bangalore', 'Mumbai Indians', 'field', 'Mumbai Indians', 'wickets', 6, 'Suryakumar Yadav', 'Wankhede Stadium', 'Suryakumar Yadav', 83, 'Jason Behrendorff', '3--36'),
+                (3, 2023, 'Chennai', 'Chennai Super Kings', 'Kolkata Knight Riders', 'Chennai Super Kings', 'bat', 'Kolkata Knight Riders', 'wickets', 6, 'Rinku Singh', 'MA Chidambaram Stadium', 'Shivam Dube', 48, 'Varun Chakravarthy', '2--36'),
+                (4, 2023, 'Delhi', 'Delhi Capitals', 'Chennai Super Kings', 'Chennai Super Kings', 'bat', 'Chennai Super Kings', 'runs', 77, 'Ruturaj Gaikwad', 'Arun Jaitley Stadium', 'Ruturaj Gaikwad', 79, 'Deepak Chahar', '3--22'),
+                (5, 2023, 'Bangalore', 'Royal Challengers Bangalore', 'Gujarat Titans', 'Gujarat Titans', 'field', 'Gujarat Titans', 'wickets', 6, 'Shubman Gill', 'M Chinnaswamy Stadium', 'Shubman Gill', 104, 'Rashid Khan', '1--24'),
+                (6, 2023, 'Lucknow', 'Lucknow Super Giants', 'Mumbai Indians', 'Mumbai Indians', 'field', 'Mumbai Indians', 'runs', 81, 'Akash Madhwal', 'BRSABV Ekana Cricket Stadium', 'Cameron Green', 41, 'Akash Madhwal', '5--5');
+            """)
+        if _is_empty("sarah_products"):
+            cur.executescript("""
+            INSERT INTO sarah_products VALUES
+                (1, 'MacBook Pro 16', 'Laptops', 2499.00, 45),
+                (2, 'iPhone 15 Pro Max', 'Smartphones', 1199.00, 120),
+                (3, 'AirPods Max', 'Audio', 549.00, 85),
+                (4, 'Studio Display 27', 'Monitors', 1599.00, 30),
+                (5, 'Magic Keyboard Touch ID', 'Accessories', 199.00, 210);
+            """)
+
         conn.commit()
         self._sample_sqlite_conn = conn
-        self._schema_cache = get_default_sample_schema()
+        self._schema_cache = extract_sqlite_schema(conn)
 
     def get_schema(self, force_refresh: bool = False) -> DatabaseSchema:
         if self._schema_cache and not force_refresh:

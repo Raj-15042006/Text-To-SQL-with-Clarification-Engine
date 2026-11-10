@@ -87,7 +87,17 @@
       <div class="sidebar-pane" id="pane-relations" style="display: none;">
         <div class="pane-header">
           <span class="pane-title">Table Relationships</span>
-          <span class="pane-caption">Foreign Keys</span>
+          <button class="btn-text-subtle" id="btn-sidebar-new-rel" title="Manually add relationship">+ Add Link</button>
+        </div>
+        <div class="sidebar-rel-cta-wrap">
+          <button class="btn-sidebar-diagram" id="btn-open-diagram-from-sidebar" title="Open Power BI-Style Model Relationship Diagram">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+              <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              <path d="M10 6.5h4a2 2 0 0 1 2 2V14"></path>
+            </svg>
+            <span>Open Model Diagram</span>
+          </button>
         </div>
         <div class="relation-list" id="sidebar-relation-list">
           <div class="loading-state">Loading relationships...</div>
@@ -142,9 +152,35 @@
             <span class="nav-sep">/</span>
             <span class="nav-chat-title" id="nav-chat-title">New Conversation</span>
           </div>
+
+          <!-- Workspace Screen Switcher (Power BI style Report/Chat vs Model View) -->
+          <div class="workspace-view-switcher" id="workspace-view-switcher" role="tablist" aria-label="Workspace View">
+            <button class="view-switch-btn active" id="nav-view-chat" role="tab" aria-selected="true" title="Conversational Query Assistant">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              <span>Assistant</span>
+            </button>
+            <button class="view-switch-btn" id="nav-view-model" role="tab" aria-selected="false" title="Power BI-Style Table Relationship Diagram & Model Editor">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+                <path d="M10 6.5h4a2 2 0 0 1 2 2V14"></path>
+              </svg>
+              <span>Model View</span>
+              <span class="view-rel-badge" id="nav-rel-count">0</span>
+            </button>
+          </div>
         </div>
 
         <div class="top-nav-right">
+          <!-- Intelligence, Memory & Governance Hub -->
+          <button class="btn-top-model-chip" id="top-btn-governance" title="Personal Memory, Team Glossary, Persona & Clarification Quality Metrics">
+            <span class="model-mode-icon">🧠</span>
+            <span class="model-name-text" id="top-persona-name">Analyst</span>
+            <span class="model-accuracy-badge" id="top-gov-badge">Rules</span>
+          </button>
+
           <!-- Active AI Model & Self-Learning Pill -->
           <button class="btn-top-model-chip" id="top-btn-model" title="AI Engine & Self-Learning Model Status">
             <span class="model-mode-dot" id="top-model-dot"></span>
@@ -257,7 +293,7 @@
       </div>
 
       <!-- Pinned Modern AI Prompt Composer -->
-      <section class="composer-section">
+      <section class="composer-section" id="composer-section">
         <div class="prompt-composer">
           <div class="composer-header">
             <div class="composer-mode">
@@ -285,6 +321,19 @@
               <span class="key-hint"><kbd>↵ Return</kbd> to run</span>
               <span class="key-hint-sep">&middot;</span>
               <span class="key-hint"><kbd>⇧ Shift + ↵</kbd> new line</span>
+              <span class="key-hint-sep">&middot;</span>
+              <label class="composer-control-pill" title="Clarification Mode: Smart asks when divergent, Strict always asks before assuming, Best-Guess runs immediately with fast toggles">
+                <span>Mode:</span>
+                <select id="select-answer-mode" class="composer-mini-select">
+                  <option value="smart" selected>Smart (Ask/Assume)</option>
+                  <option value="strict">Strict (Always Clarify)</option>
+                  <option value="fast_best_guess">Ask-After-Answer</option>
+                </select>
+              </label>
+              <label class="composer-control-pill pii-toggle-pill" title="Automatically mask detected sensitive columns (email, phone, salary, etc.)">
+                <input type="checkbox" id="toggle-mask-pii">
+                <span>Mask PII</span>
+              </label>
             </div>
             <button class="btn-run" id="btn-submit" title="Run Query">
               <span id="btn-ask-text">Run</span>
@@ -294,6 +343,137 @@
               </svg>
               <div class="spinner" id="spinner" style="display: none;"></div>
             </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Power BI-Style Table Relationship Diagram (Model View Screen) -->
+      <section class="model-view-screen" id="model-view-screen" style="display: none;">
+        <!-- Modeling Ribbon / Toolbar -->
+        <div class="model-toolbar">
+          <div class="model-toolbar-left">
+            <div class="model-title-group">
+              <span class="model-view-heading">Data Model</span>
+              <span class="model-stats-pill" id="erd-stats-pill">0 tables &bull; 0 relationships</span>
+            </div>
+            <div class="toolbar-sep"></div>
+            <button class="btn-model-tool primary" id="btn-model-new-rel" title="Manually create a new table relationship">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+              <span>New Relationship</span>
+            </button>
+            <button class="btn-model-tool" id="btn-model-autodetect" title="Scan schema columns to auto-detect relationships">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+              </svg>
+              <span>Auto-Detect</span>
+            </button>
+            <button class="btn-model-tool" id="btn-model-manage-rel" title="View, edit, or toggle all relationships in table format">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+              <span>Manage Relationships</span>
+            </button>
+          </div>
+
+          <div class="model-toolbar-right">
+            <div class="zoom-control-group">
+              <button class="btn-zoom" id="btn-erd-zoom-out" title="Zoom Out">&minus;</button>
+              <span class="zoom-percent" id="erd-zoom-label">100%</span>
+              <button class="btn-zoom" id="btn-erd-zoom-in" title="Zoom In">+</button>
+            </div>
+            <button class="btn-model-tool" id="btn-erd-fit" title="Fit diagram to viewport">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"></path>
+              </svg>
+              <span>Fit View</span>
+            </button>
+            <button class="btn-model-tool" id="btn-erd-auto-layout" title="Auto-arrange tables cleanly">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="3" width="7" height="7" rx="1"></rect>
+                <rect x="3" y="14" width="7" height="7" rx="1"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1"></rect>
+              </svg>
+              <span>Auto-Arrange</span>
+            </button>
+            <button class="btn-model-tool subtle" id="btn-erd-back-chat" title="Return to Query Assistant">
+              <span>&larr; Assistant</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Interactive Canvas Viewport -->
+        <div class="erd-viewport" id="erd-viewport">
+          <div class="erd-world" id="erd-world">
+            <!-- SVG Connector Wire Layer -->
+            <svg class="erd-svg-layer" id="erd-svg-layer" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <filter id="wire-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#0071e3" flood-opacity="0.25"/>
+                </filter>
+              </defs>
+              <g id="erd-wires-group"></g>
+              <path id="erd-preview-wire" class="erd-preview-wire" d="" style="display: none;"></path>
+            </svg>
+
+            <!-- Draggable Table Cards Layer -->
+            <div class="erd-tables-layer" id="erd-tables-layer"></div>
+          </div>
+
+          <!-- Empty State (Zero Tables) -->
+          <div class="erd-empty-state" id="erd-empty-state" style="display: none;">
+            <div class="erd-empty-icon">
+              <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                <path d="M10 6.5h4a2 2 0 0 1 2 2V14"></path>
+              </svg>
+            </div>
+            <h3>No Tables in Model View</h3>
+            <p>Upload CSV, Excel, JSON, or SQL datasets to visualize schemas and draw Power BI-style relationships between tables.</p>
+            <button class="btn btn-primary" id="btn-erd-empty-upload">+ Upload Dataset</button>
+          </div>
+
+          <!-- Selected Relationship Quick Inspector Popover -->
+          <div class="erd-rel-popover" id="erd-rel-popover" style="display: none;">
+            <div class="popover-head">
+              <div class="popover-title-wrap">
+                <span class="popover-status-dot" id="popover-status-dot"></span>
+                <span class="popover-title" id="popover-rel-title">marks.student_id &rarr; students.id</span>
+              </div>
+              <button class="btn-close-sm" id="btn-close-rel-popover">&times;</button>
+            </div>
+            <div class="popover-meta" id="popover-rel-meta">Many-to-One (*:1) &bull; Single Cross-Filter &bull; Active</div>
+            <div class="popover-actions">
+              <button class="popover-btn" id="btn-pop-toggle-active">Set Inactive</button>
+              <button class="popover-btn primary" id="btn-pop-edit">Edit...</button>
+              <button class="popover-btn" id="btn-pop-query">Query Join</button>
+              <button class="popover-btn danger" id="btn-pop-delete">Delete</button>
+            </div>
+          </div>
+
+          <!-- Bottom Legend & Help HUD -->
+          <div class="erd-hud-bottom">
+            <div class="erd-legend-pill">
+              <span class="legend-item"><span class="legend-badge">1</span> One</span>
+              <span class="legend-item"><span class="legend-badge">*</span> Many</span>
+              <span class="legend-sep">&bull;</span>
+              <span class="legend-item"><span class="legend-line solid"></span> Active</span>
+              <span class="legend-item"><span class="legend-line dashed"></span> Inactive</span>
+              <span class="legend-sep">&bull;</span>
+              <span class="legend-item"><span class="legend-arrow">&#9656;</span> Filter Dir</span>
+            </div>
+            <div class="erd-hint-pill">
+              Drag card header to move &bull; Drag column handle <span class="hint-dot"></span> to link tables &bull; Click line to configure &bull; Scroll to zoom
+            </div>
           </div>
         </div>
       </section>
@@ -627,7 +807,7 @@
         <!-- Learning Metrics Dashboard -->
         <div class="model-metrics-card">
           <div class="metrics-header">
-            <span class="metrics-title">Local Self-Learning Stats</span>
+            <span class="metrics-title" id="model-arch-label">Word+Char TF-IDF + Balanced Ensemble</span>
             <span class="metrics-status-pill ready" id="model-metrics-status">Trained & Ready</span>
           </div>
           <div class="metrics-grid">
@@ -637,7 +817,11 @@
             </div>
             <div class="metric-item">
               <span class="metric-val" id="metric-accuracy">100%</span>
-              <span class="metric-lbl">Classification Acc</span>
+              <span class="metric-lbl">CV Accuracy</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-val" id="metric-cv-f1">--</span>
+              <span class="metric-lbl">CV Weighted F1</span>
             </div>
             <div class="metric-item">
               <span class="metric-val" id="metric-vocab">84</span>
@@ -683,6 +867,235 @@
     </div>
   </div>
 
+  <!-- Create / Edit Relationship Modal (Power BI Style) -->
+  <div class="modal-backdrop" id="relationship-editor-modal" style="display: none;">
+    <div class="apple-modal rel-editor-dialog">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3 id="rel-editor-title">Create Relationship</h3>
+          <p class="modal-subtitle">Configure linked columns, cardinality, cross-filter direction, and active state.</p>
+        </div>
+        <button class="btn-close" id="btn-close-rel-editor">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="rel-endpoints-grid">
+          <div class="rel-endpoint-box">
+            <div class="endpoint-tag">From Table (Child / Fact)</div>
+            <div class="field-item">
+              <label for="rel-src-table">Table</label>
+              <select id="rel-src-table" class="modal-select"></select>
+            </div>
+            <div class="field-item">
+              <label for="rel-src-col">Column</label>
+              <select id="rel-src-col" class="modal-select"></select>
+            </div>
+          </div>
+
+          <div class="rel-swap-col">
+            <button type="button" class="btn-swap-endpoints" id="btn-rel-swap" title="Swap Source and Target">
+              &#8644;
+            </button>
+          </div>
+
+          <div class="rel-endpoint-box">
+            <div class="endpoint-tag">To Table (Parent / Lookup)</div>
+            <div class="field-item">
+              <label for="rel-tgt-table">Table</label>
+              <select id="rel-tgt-table" class="modal-select"></select>
+            </div>
+            <div class="field-item">
+              <label for="rel-tgt-col">Column</label>
+              <select id="rel-tgt-col" class="modal-select"></select>
+            </div>
+          </div>
+        </div>
+
+        <div class="rel-inspection-banner" id="rel-editor-inspection" style="display: none;"></div>
+
+        <div class="field-grid" style="margin-top: 12px;">
+          <div class="field-item">
+            <label for="rel-cardinality">Cardinality</label>
+            <select id="rel-cardinality" class="modal-select">
+              <option value="Many-to-One">Many to one (*:1)</option>
+              <option value="One-to-One">One to one (1:1)</option>
+              <option value="One-to-Many">One to many (1:*)</option>
+              <option value="Many-to-Many">Many to many (*:*)</option>
+            </select>
+          </div>
+          <div class="field-item">
+            <label for="rel-cross-filter">Cross filter direction</label>
+            <select id="rel-cross-filter" class="modal-select">
+              <option value="Single">Single</option>
+              <option value="Both">Both (Bi-directional)</option>
+            </select>
+          </div>
+        </div>
+
+        <label class="rel-checkbox-row" for="rel-is-active">
+          <input type="checkbox" id="rel-is-active" checked>
+          <span>Make this relationship active</span>
+        </label>
+
+        <div class="test-result" id="rel-editor-error" style="display: none;"></div>
+      </div>
+      <div class="modal-footer rel-editor-footer">
+        <button class="btn btn-danger-outline" id="btn-rel-delete" style="display: none;">Delete</button>
+        <div class="footer-right-btns">
+          <button class="btn btn-secondary" id="btn-rel-cancel">Cancel</button>
+          <button class="btn btn-primary" id="btn-rel-save">Save Relationship</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manage Relationships Modal (Power BI Table View) -->
+  <div class="modal-backdrop" id="manage-relationships-modal" style="display: none;">
+    <div class="apple-modal manage-rel-dialog">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>Manage Relationships</h3>
+          <p class="modal-subtitle">Inspect, activate/deactivate, edit, or auto-detect table joins in your workspace.</p>
+        </div>
+        <button class="btn-close" id="btn-close-manage-rel">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="manage-rel-toolbar">
+          <button class="btn btn-primary btn-sm" id="btn-manage-new">+ New...</button>
+          <button class="btn btn-secondary btn-sm" id="btn-manage-autodetect">Auto-detect...</button>
+        </div>
+        <div class="manage-rel-table-wrap">
+          <table class="manage-rel-table">
+            <thead>
+              <tr>
+                <th>Active</th>
+                <th>From (Table.Column)</th>
+                <th>To (Table.Column)</th>
+                <th>Cardinality</th>
+                <th>Cross Filter</th>
+                <th>Source</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="manage-rel-tbody">
+              <tr><td colspan="7" class="loading-state">Loading relationships...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-manage-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auto-Detect Relationships Discovery Modal -->
+  <div class="modal-backdrop" id="autodetect-modal" style="display: none;">
+    <div class="apple-modal autodetect-dialog">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>Auto-Detect Relationships</h3>
+          <p class="modal-subtitle">Detected column key matches across tables in your active workspace.</p>
+        </div>
+        <button class="btn-close" id="btn-close-autodetect">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="autodetect-results-list" class="autodetect-list">
+          <div class="loading-state">Scanning schema columns and keys...</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="btn-autodetect-cancel">Close</button>
+        <button class="btn btn-primary" id="btn-autodetect-apply" style="display: none;">Apply Selected Relationships</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Intelligence, Semantic Memory, Team Glossary & Governance Hub Modal -->
+  <div class="modal-backdrop" id="governance-modal" style="display: none;">
+    <div class="apple-modal gov-dialog" style="max-width: 720px;">
+      <div class="modal-header">
+        <div class="modal-header-titles">
+          <h3>Clarification Intelligence & Governance Hub</h3>
+          <p class="modal-subtitle">Configure Analyst Persona, inspect decaying Personal Memory, manage approved Team Glossary rules, and monitor Quality &amp; Audit metrics.</p>
+        </div>
+        <button class="btn-close" id="btn-close-governance">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="segmented-control modal-seg" id="gov-seg-control">
+          <button class="seg-btn active" data-gov-tab="persona">Role Persona</button>
+          <button class="seg-btn" data-gov-tab="memory">Personal Memory (<span id="gov-mem-count">0</span>)</button>
+          <button class="seg-btn" data-gov-tab="glossary">Team Glossary (<span id="gov-gls-count">0</span>)</button>
+          <button class="seg-btn" data-gov-tab="metrics">Quality &amp; Audit</button>
+        </div>
+
+        <!-- Tab 1: Role-Based Disambiguation Persona -->
+        <div class="gov-pane" id="gov-pane-persona">
+          <p class="pane-caption" style="margin-bottom: 10px;">Select your analytical role so domain terms like <i>sales</i>, <i>city</i>, or <i>quarter</i> prioritize your team's conventions.</p>
+          <div class="persona-cards-grid" id="gov-persona-list">
+            <div class="loading-state">Loading personas...</div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Personal Semantic Memory (with time & schema decay) -->
+        <div class="gov-pane" id="gov-pane-memory" style="display: none;">
+          <p class="pane-caption" style="margin-bottom: 10px;">Learned clarification choices automatically reduce repeat questions and decay when schemas change or age past threshold.</p>
+          <div class="gov-list" id="gov-memory-list">
+            <div class="loading-state">Loading personal memory...</div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Team Glossary (Self-Growing with Approval Workflow) -->
+        <div class="gov-pane" id="gov-pane-glossary" style="display: none;">
+          <div class="glossary-add-box">
+            <div class="glossary-form-row">
+              <input type="text" id="gls-term-in" placeholder="Business Term (e.g. net burn)">
+              <input type="text" id="gls-expr-in" placeholder="SQL Expression (e.g. SUM(gross_sales - net_profit))">
+            </div>
+            <div class="glossary-form-row">
+              <input type="text" id="gls-def-in" placeholder="Definition (e.g. Net operational margin impact)">
+              <label class="gov-inline-check"><input type="checkbox" id="gls-auto-approve" checked> Auto-approve</label>
+              <button class="btn btn-primary btn-sm" id="btn-gls-add">+ Add Term</button>
+            </div>
+          </div>
+          <div class="gov-list" id="gov-glossary-list" style="margin-top: 12px;">
+            <div class="loading-state">Loading team glossary...</div>
+          </div>
+        </div>
+
+        <!-- Tab 4: Section 7 Quality Metrics & Section 6 Audit Log -->
+        <div class="gov-pane" id="gov-pane-metrics" style="display: none;">
+          <div class="metrics-grid" id="gov-metrics-grid" style="margin-bottom: 14px;"></div>
+          <div class="learned-memory-header" style="margin-bottom: 6px;">
+            <span class="memory-section-title">Immutable Query Audit Log</span>
+            <span class="memory-count-label" id="gov-audit-count">0 entries</span>
+          </div>
+          <div class="gov-audit-wrap">
+            <table class="manage-rel-table gov-audit-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Query</th>
+                  <th>Amb.</th>
+                  <th>Cost</th>
+                  <th>PII</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="gov-audit-tbody">
+                <tr><td colspan="6" class="loading-state">No query events recorded yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" id="btn-close-gov-footer">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="/static/app.js"></script>
+  <script src="/static/intelligence_ui.js"></script>
+  <script src="/static/erd_diagram.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from pydantic import BaseModel, Field
 
 class ColumnMeta(BaseModel):
@@ -14,7 +14,7 @@ class TableMeta(BaseModel):
     description: Optional[str] = None
     columns: List[ColumnMeta] = Field(default_factory=list)
     primary_keys: List[str] = Field(default_factory=list)
-    foreign_keys: List[Dict[str, str]] = Field(default_factory=list) # e.g. [{"column": "dept_id", "references": "departments.id"}]
+    foreign_keys: List[Dict[str, Any]] = Field(default_factory=list) # e.g. [{"column": "dept_id", "references": "departments.id"}]
 
 class DatabaseSchema(BaseModel):
     source_type: str = "sample"  # "postgresql" or "sample"
@@ -47,24 +47,38 @@ class DatabaseSchema(BaseModel):
                 cols_str.append(col_repr)
             lines.append(f"Table: {tbl.name}")
             lines.append(f"  Columns: {', '.join(cols_str)}")
-            if tbl.foreign_keys:
-                fk_lines = [f"  FK: {fk['column']} -> {fk['references']}" for fk in tbl.foreign_keys]
+            active_fks = [fk for fk in tbl.foreign_keys if fk.get("is_active", True)]
+            if active_fks:
+                fk_lines = [
+                    f"  FK: {fk['column']} -> {fk['references']} ({fk.get('cardinality', 'Many-to-One')})"
+                    for fk in active_fks
+                ]
                 lines.extend(fk_lines)
             lines.append("")
         return "\n".join(lines).strip()
 
-    def get_all_relationships(self) -> List[Dict[str, str]]:
+    def get_all_relationships(self, include_inactive: bool = False) -> List[Dict[str, Any]]:
         """
-        Returns all foreign key relationships in the active database schema.
+        Returns foreign key relationships in the active database schema.
+        By default, returns only active relationships for SQL join generation.
+        Set include_inactive=True for Model View visualization and management.
         """
         rels = []
         for t_name, t_meta in self.tables.items():
             for fk in t_meta.foreign_keys:
+                is_active = fk.get("is_active", True)
+                if not include_inactive and not is_active:
+                    continue
                 target = fk["references"]
                 ref_tbl, ref_col = target.split(".") if "." in target else (target, "id")
+                cardinality = fk.get("cardinality", "Many-to-One")
+                cross_filter = fk.get("cross_filter_direction", "Single")
+                is_manual = bool(fk.get("is_manual", False))
+                rel_id = fk.get("id") or f"native::{t_name}.{fk['column']}->{ref_tbl}.{ref_col}"
                 display_str = f"{t_name}.{fk['column']} → {ref_tbl}.{ref_col}"
-                desc_str = f"{t_name}.{fk['column']} references {ref_tbl}.{ref_col} (Many-to-One)"
+                desc_str = f"{t_name}.{fk['column']} references {ref_tbl}.{ref_col} ({cardinality})"
                 rels.append({
+                    "id": rel_id,
                     "source_table": t_name,
                     "source_column": fk["column"],
                     "target_table": ref_tbl,
@@ -72,11 +86,15 @@ class DatabaseSchema(BaseModel):
                     "display": display_str,
                     "description": desc_str,
                     "join_condition": f"{t_name}.{fk['column']} = {ref_tbl}.{ref_col}",
-                    "cardinality": "Many-to-One"
+                    "cardinality": cardinality,
+                    "cross_filter_direction": cross_filter,
+                    "is_active": is_active,
+                    "is_manual": is_manual,
+                    "is_native": not is_manual
                 })
         return rels
 
-    def get_relationships_between(self, table_names: List[str]) -> List[Dict[str, str]]:
+    def get_relationships_between(self, table_names: List[str]) -> List[Dict[str, Any]]:
         """
         Finds foreign key relationships connecting or involving the given set of tables.
         If multiple tables are provided, finds direct connections between them.
@@ -127,9 +145,9 @@ class DatabaseSchema(BaseModel):
                 new_meta = TableMeta(
                     name=t_meta.name,
                     description=t_meta.description,
-                    columns=t_meta.columns,
-                    primary_keys=t_meta.primary_keys,
-                    foreign_keys=filtered_fks
+                    columns=[c.model_copy(deep=True) for c in t_meta.columns],
+                    primary_keys=list(t_meta.primary_keys),
+                    foreign_keys=[dict(fk) for fk in filtered_fks]
                 )
                 filtered_tables[t_name] = new_meta
 

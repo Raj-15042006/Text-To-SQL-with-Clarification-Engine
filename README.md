@@ -26,12 +26,24 @@ The **Text-to-SQL with Clarification Engine** solves this fundamentally:
 
 ## ✨ Key Features
 
-### 1. 🔍 Intelligent Clarification & Ambiguity Engine
-- **Multi-Category Ambiguity Detection**: Flags lexical ambiguity, ambiguous column/table mappings, underspecified aggregations, missing sorting directions, and temporal scope ambiguities.
-- **Interactive Multi-Turn Dialogue**: Prompts users with structured multiple-choice clarification pills and remembers selections across session turns.
-- **Anti-Greedy Schema Linking**: Filters noise and stopword tokens so conversational words don't hijack table and column resolution.
+### 1. 🔍 Clarification Intelligence & Reasoning Transparency
+- **Smart Scoring, Execution-Divergence & What-If Previews**: Scores ambiguity (`0.0–1.0`), suppresses redundant questions when candidate SQL probes produce identical results, and annotates options with live DB values and estimated row counts (`~N rows`).
+- **Modes (`Smart`, `Strict`, `Ask-After-Answer`)**: Executes low-ambiguity/best-guess interpretations immediately in **Ask-After-Answer** mode with instant alternative pills, or pauses upfront in **Strict** mode.
+- **Think $\to$ Analyze $\to$ Verify $\to$ Synthesize Reasoning**: Collapsible thought-process timeline, **Assumption Ledger** (one-click alternative re-runs), **Query Provenance** (phrase $\to$ SQL clause mapping), **Confidence Reasons** popover, and quantitative figure synthesis.
+- **Zero-Hallucination Schema-Gap Guard & Calibration**: Detects out-of-schema entities before SQL generation and supports example-based calibration (`"expected around ..."`).
+- **Dynamic Ambiguity Detection**: Detects `order_status` scope filters, undefined business metrics (`churn`, `retention`, `conversion rate`), and multi-FK join path ambiguity across schema relationships.
 
-### 2. 🧮 Universal Domain Formula & Calculation Engine
+### 2. 🧩 Power BI–Style Table Relationship Diagram (Model View)
+- **Interactive ERD Canvas**: Drag table cards, pan/zoom canvas, drag between column ports to create joins manually, configure cardinality (`1:1`, `1:N`, `N:1`, `N:N`), toggle active state / cross-filter direction, and auto-detect matching keys across tables.
+- **Visual Schema Column Picker**: Click `🔍` on any column in **Model View** to launch an Assistant prompt directly for that field.
+- **Direct NLP Graph Integration**: Multi-table SQL generation reads active manual and foreign-key relationships in real time.
+
+### 3. 🧠 Semantic Memory, Team Glossary, Governance & Quality Metrics
+- **Personal Semantic Memory & Clarification Replay**: Learns confirmed interpretations per authenticated user with both temporal decay and schema-fingerprint invalidation.
+- **Self-Growing Team Glossary & Personas**: Propose/approve business definitions (`Honors`, custom metrics) and switch role personas (`general`, `finance`, `marketing`, `operations`, `academic`).
+- **Safety, PII & Quality Hub**: Read-only SQLGlot AST guardrails, query scan cost estimation (`EXPLAIN`), `NULL`-rate data-quality warnings, PII detection & masking (`Mask PII` toggle), immutable audit logs, and clarification quality metrics (Clarification Rate, Question Usefulness, Avg Resolution Turns, Silent Failure Rate).
+
+### 4. 🧮 Universal Domain Formula & Calculation Engine
 Built-in domain intelligence capable of answering complex analytical calculations:
 - 🏏 **Cricket & Sports Analytics**: Bowling strike rate, batting strike rate, bowling average, economy rate, boundary percentage, head-to-head match breakdowns (`CSK vs MI`), and toss statistics.
 - 💼 **Finance & Business**: ROI, CAGR, Gross/Operating Margin, Net Present Value (NPV), Break-even point, EBITDA.
@@ -39,24 +51,13 @@ Built-in domain intelligence capable of answering complex analytical calculation
 - ⚙️ **Physics & Science**: Kinetic/Potential Energy, Force, Velocity/Acceleration, Ohm's Law, Gravitational Attraction, Work & Power.
 - 🌍 **Geography & Conversions**: Haversine distance, speed/length/temperature unit conversions.
 
-### 3. 🛡️ AST-Level SQL Validation & Security Guardrails
-- **SQLGlot Abstract Syntax Tree (AST) Parsing**: Deep-inspects query structure before database handoff.
-- **Strict Read-Only Enforcement**: Blocks mutating operations (`DROP`, `DELETE`, `TRUNCATE`, `UPDATE`, `ALTER`, `GRANT`, `INSERT`).
-- **Injection & Exfiltration Defense**: Validates table/column existence against active schemas, disallows stacked queries, and injects default `LIMIT 500` pagination guards.
+### 5. ⚡ Hybrid Dual-Provider Architecture (Upgraded Offline Ensemble)
+- **Local Self-Learning NLP Ensemble**: `FeatureUnion` (`word` 1–3 n-grams + `char_wb` 3–5 n-grams) + Balanced Soft-Voting Ensemble (`LogisticRegression` + `CalibratedClassifierCV(LinearSVC)` + `ComplementNB`) trained on `282` domain seeds (`77.0%` Stratified K-Fold CV accuracy, `75.9%` CV Weighted F1) with table/schema-gated semantic replay.
+- **Gemini AI Provider & Zero-Downtime Fallback**: High-reasoning cloud LLM option with automatic local failover.
 
-### 4. ⚡ Hybrid Dual-Provider Architecture
-- **Gemini AI Provider**: High-reasoning cloud LLM using Google Gemini (`gemini-3.1-flash-lite`, `gemini-1.5-flash`).
-- **Local Offline NLP Provider**: Embedded TF-IDF vectorizer + multiclass classifier trained on 197 domain seeds across 16 analytical intents with 100% classification accuracy.
-- **Failover Guarantee**: Zero downtime — network dropouts automatically trigger local offline inference.
-
-### 5. 👥 Flagship Multi-Tenancy & Workspace Isolation
-- **Authentication**: Salted SHA-256 password hashing with bearer token session tracking.
-- **Isolated User Datasets**: Each account maintains independent database schemas, uploaded files, and chat history.
-- **First-Time User Experience**: Empty-state dashboards for fresh signups with sample data onboarding.
-
-### 6. 📂 CSV / Excel Ingestion & Power BI Ready
-- **Drag-and-Drop Ingestion**: Automatically creates tables, detects schema types, and indexes uploaded `.csv` and `.xlsx` files.
-- **Power BI DAX Generator**: Pre-calculated DAX measure definitions and data dictionary guides for enterprise analytics.
+### 6. 👥 Multi-Tenancy, Workspace Isolation & CSV/Excel Ingestion
+- **Authentication & Isolation**: Salted SHA-256 credentials, bearer session tracking, per-user uploaded datasets in persistent SQLite (`data/local_warehouse.db`), and tenant-scoped clarification replays/glossary terms.
+- **Drag-and-Drop Ingestion**: Automatically creates tables, detects schema types, and indexes uploaded `.csv`, `.xlsx`, and `.sql` files.
 
 ---
 
@@ -113,30 +114,37 @@ flowchart TD
 │   │   ├── gemini_provider.py      # Google Gemini integration
 │   │   └── local_nlp_provider.py   # Offline Scikit-Learn NLP engine
 │   ├── modules/
-│   │   ├── ambiguity.py            # Ambiguity detection & multi-turn state
-│   │   ├── clarification.py        # Question generator & option pills
-│   │   ├── formula_engine.py       # Multi-domain calculation algorithms
-│   │   ├── learning_engine.py      # Local ML training loop & seed datasets
-│   │   ├── nlp_engine.py           # Offline rule-based SQL synthesis
-│   │   ├── auth_manager.py         # Multi-tenant user auth & session management
-│   │   └── conversation_manager.py # Conversation persistence & query tracking
+│   │   ├── ambiguity.py                # Ambiguity detection & dynamic schema checks
+│   │   ├── clarification.py            # Session state & clarification rewrite turns
+│   │   ├── clarification_intelligence.py # Divergence, grounding, assumptions, confidence & thinking
+│   │   ├── semantic_memory.py          # Personal memory decay, glossary workflow & personas
+│   │   ├── governance.py               # Cost guardrails, NULL scan, PII masking & metrics
+│   │   ├── relationship_manager.py     # Manual/auto-detected schema joins & ERD layouts
+│   │   ├── formula_engine.py           # Multi-domain calculation algorithms
+│   │   ├── learning_engine.py          # Word+Char TF-IDF + Balanced Voting Ensemble
+│   │   ├── nlp_engine.py               # Schema-linking SQL synthesis & precision figures
+│   │   ├── auth_manager.py             # Multi-tenant user auth & session management
+│   │   └── conversation_manager.py     # Persistent conversation & metadata storage
 │   └── routers/
-│       ├── auth.py                 # Authentication API endpoints
-│       ├── query.py                # Query, clarification, and execution routes
-│       ├── database.py             # Schema inspection & table endpoints
-│       └── files.py                # Dataset upload & management routes
+│       ├── auth.py                     # Authentication API endpoints
+│       ├── query.py                    # Query, clarification, & intelligence pipeline
+│       ├── schema.py                   # Schema inspection & relationship endpoints
+│       ├── governance.py               # Memory, glossary, persona, audit & quality API
+│       ├── model.py                    # ML model status, training & feedback routes
+│       └── upload.py                   # Dataset upload & management routes
 ├── data/
-│   ├── models/                     # Trained local TF-IDF & classifier joblib binaries
+│   ├── models/                         # Trained joblib ensemble binaries & CV metrics
+│   └── team_glossary.json              # Approved default business glossary seeds
 ├── frontend/
-│   ├── index.html                  # Responsive modern web interface
-│   ├── css/style.css               # Flagship dark/light theme styling
-│   └── js/app.js                   # Client-side state, auth, and query controller
-├── tests/                          # Comprehensive pytest test suite (27+ tests)
-├── .env.example                    # Template environment configuration
-├── .gitignore                      # Git exclusion rules for secrets and caches
-├── requirements.txt                # Python package dependencies
-├── SRS.md                          # Full Software Requirements Specification
-└── README.md                       # Project documentation
+│   ├── index.html                      # Assistant, Model View & Intelligence Hub UI
+│   ├── style.css                       # Apple HIG theme styling
+│   ├── app.js                          # Client-side state, auth, and query controller
+│   ├── erd_diagram.js                  # Interactive Power BI-style ERD canvas
+│   └── intelligence_ui.js              # Thought process, ledger, provenance & governance UI
+├── tests/                              # Backend & Clarification Intelligence suites (41 core tests)
+├── .gitignore                          # Git exclusion rules for secrets, DBs & runtime logs
+├── requirements.txt                    # Python package dependencies
+└── README.md                           # Project documentation
 ```
 
 ---
@@ -170,12 +178,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-# Server Configuration
-HOST=127.0.0.1
-PORT=8000
-```
-
-### 6. Run the Application
+### 5. Run the Application
 ```bash
 python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```

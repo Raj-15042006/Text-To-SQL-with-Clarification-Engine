@@ -1,0 +1,8 @@
+{
+  "architecture": "ensemble_v2",
+  "sample_count": 287,
+  "accuracy": 0.9930313588850174,
+  "cv_accuracy": 0.7524122807017544,
+  "cv_f1_score": 0.737532496106938,
+  "best_c": 3.0
+}

@@ -6,7 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
 from backend.config import settings
-from backend.routers import query, schema, history, upload, conversations, auth, model
+from backend.routers import query, schema, history, upload, conversations, auth, model, governance
 
 app = FastAPI(
     title="Text-to-SQL with Clarification Engine",
@@ -31,6 +31,7 @@ app.include_router(history.router)
 app.include_router(upload.router)
 app.include_router(conversations.router)
 app.include_router(model.router)
+app.include_router(governance.router)
 
 # Health & Info Endpoint
 @app.get("/api/health")

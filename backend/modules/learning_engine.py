@@ -5,16 +5,24 @@ and improves continuously from user feedback and query executions.
 """
 
 import os
+import re
 import json
 import time
 import logging
+from collections import Counter
 from typing import List, Dict, Any, Optional, Tuple
 from pathlib import Path
 from pydantic import BaseModel, Field
 
 from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.pipeline import FeatureUnion
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
+from sklearn.svm import LinearSVC
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.naive_bayes import ComplementNB
+from sklearn.ensemble import VotingClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.metrics import accuracy_score, f1_score
 import joblib
 
 logger = logging.getLogger(__name__)
@@ -1222,6 +1230,327 @@ SEED_TRAINING_DATA = [
         "sql": "SELECT 10.0 AS distance_km, 48.0 AS time_minutes, '4:48' AS pace_min_per_km, 12.5 AS speed_kmh;",
         "tables_used": [],
         "feedback_score": 1
+    },
+    # --- Expanded Balanced Multi-Column, Figure Retrieval & Typo-Resilient Seeds ---
+    {
+        "id": "seed_147",
+        "query": "Retrieve figures for product_name, category, unit_price, inventory_count from sarah_products",
+        "intent": "FILTER_SELECT",
+        "sql": "SELECT product_name, category, unit_price, inventory_count FROM sarah_products LIMIT 20;",
+        "tables_used": ["sarah_products"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_148",
+        "query": "Show product_name, country, net_sales, net_profit with figures for each",
+        "intent": "FILTER_SELECT",
+        "sql": "SELECT product_name, country, net_sales, net_profit FROM global_enterprise LIMIT 20;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_149",
+        "query": "Extract columns student name, score, attendance_percentage, city from students",
+        "intent": "FILTER_SELECT",
+        "sql": "SELECT name, city, attendance_percentage FROM students LIMIT 20;",
+        "tables_used": ["students"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_150",
+        "query": "Give me net_sales, gross_profit, discount_amount, profit_margin_pct for USA orders",
+        "intent": "FILTER_SELECT",
+        "sql": "SELECT product_name, country, net_sales, gross_profit, discount_amount, profit_margin_pct FROM global_enterprise WHERE country = 'USA';",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_151",
+        "query": "List store_city, customer_city, revenue, units_sold for sales above 15000",
+        "intent": "FILTER_SELECT",
+        "sql": "SELECT store_city, customer_city, revenue, units_sold FROM sales WHERE revenue > 15000;",
+        "tables_used": ["sales"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_152",
+        "query": "Show all rows and figures from global_enterprise",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT order_date, ship_mode, country, product_name, unit_price, net_sales, net_profit FROM global_enterprise LIMIT 20;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_153",
+        "query": "Show summary and sample rows from sarah_products",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT product_name, category, unit_price, inventory_count FROM sarah_products LIMIT 20;",
+        "tables_used": ["sarah_products"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_154",
+        "query": "Preview the first 20 rows of departments",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT id, name, code FROM departments LIMIT 20;",
+        "tables_used": ["departments"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_155",
+        "query": "Display everything in courses table",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT title, code, credits FROM courses LIMIT 20;",
+        "tables_used": ["courses"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_156",
+        "query": "Inspect sample data from marks table",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT semester, score, max_score, grade FROM marks LIMIT 20;",
+        "tables_used": ["marks"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_157",
+        "query": "Show all columns and numbers from sales",
+        "intent": "TABLE_SCAN",
+        "sql": "SELECT store_city, customer_city, revenue, units_sold, transaction_date FROM sales LIMIT 20;",
+        "tables_used": ["sales"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_158",
+        "query": "Give Top 3 products with their highest net sales, total revenue sorted by countries (give figures for each)",
+        "intent": "TOP_N_RANK",
+        "sql": "SELECT product_name, country, MAX(net_sales) AS highest_net_sales, SUM(gross_sales) AS total_gross_sales FROM global_enterprise GROUP BY product_name, country ORDER BY highest_net_sales DESC, country ASC LIMIT 3;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_159",
+        "query": "Top 5 countries by net profit and gross sales with figures",
+        "intent": "TOP_N_RANK",
+        "sql": "SELECT country, SUM(net_profit) AS total_net_profit, SUM(gross_sales) AS total_gross_sales FROM global_enterprise GROUP BY country ORDER BY total_net_profit DESC LIMIT 5;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_160",
+        "query": "Top 10 customers by total net sales sorted descending",
+        "intent": "TOP_N_RANK",
+        "sql": "SELECT customer_name, SUM(net_sales) AS total_net_sales, COUNT(*) AS order_count FROM global_enterprise GROUP BY customer_name ORDER BY total_net_sales DESC LIMIT 10;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_161",
+        "query": "Bottom 3 products by inventory_count with unit_price",
+        "intent": "TOP_N_RANK",
+        "sql": "SELECT product_name, category, unit_price, inventory_count FROM sarah_products ORDER BY inventory_count ASC LIMIT 3;",
+        "tables_used": ["sarah_products"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_162",
+        "query": "Rank top 5 cities by total revenue and units sold",
+        "intent": "TOP_N_RANK",
+        "sql": "SELECT store_city, SUM(revenue) AS total_revenue, SUM(units_sold) AS total_units FROM sales GROUP BY store_city ORDER BY total_revenue DESC LIMIT 5;",
+        "tables_used": ["sales"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_163",
+        "query": "Join students and departments to show student name and department name",
+        "intent": "JOIN_LOOKUP",
+        "sql": "SELECT students.name, departments.name AS department_name, students.attendance_percentage FROM students JOIN departments ON students.department_id = departments.id;",
+        "tables_used": ["students", "departments"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_164",
+        "query": "Show marks linked with student names and course titles",
+        "intent": "JOIN_LOOKUP",
+        "sql": "SELECT students.name, courses.title, marks.score, marks.grade FROM marks JOIN students ON marks.student_id = students.id JOIN courses ON marks.course_id = courses.id;",
+        "tables_used": ["marks", "students", "courses"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_165",
+        "query": "List all courses offered by each department with credits",
+        "intent": "JOIN_LOOKUP",
+        "sql": "SELECT departments.name, courses.title, courses.credits FROM courses JOIN departments ON courses.department_id = departments.id;",
+        "tables_used": ["courses", "departments"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_166",
+        "query": "Combine customers and orders to get total spending per customer",
+        "intent": "JOIN_LOOKUP",
+        "sql": "SELECT customers.name, SUM(orders.amount) AS total_amount FROM orders JOIN customers ON orders.customer_id = customers.id GROUP BY customers.name;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_167",
+        "query": "Show student average marks grouped by department name",
+        "intent": "JOIN_LOOKUP",
+        "sql": "SELECT departments.name, ROUND(AVG(marks.score), 2) AS avg_score FROM marks JOIN students ON marks.student_id = students.id JOIN departments ON students.department_id = departments.id GROUP BY departments.name;",
+        "tables_used": ["marks", "students", "departments"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_168",
+        "query": "Calculate present value of 50000 discounted at 8% over 5 years",
+        "intent": "FORMULA_FINANCE",
+        "sql": "SELECT ROUND(50000.0 / POWER(1.08, 5), 2) AS present_value;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_169",
+        "query": "Compute net present value NPV for 100000 investment with 35000 annual cash flow over 4 years at 10% rate",
+        "intent": "FORMULA_FINANCE",
+        "sql": "SELECT ROUND(-100000 + 35000/1.1 + 35000/POWER(1.1,2) + 35000/POWER(1.1,3) + 35000/POWER(1.1,4), 2) AS npv;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_170",
+        "query": "Compute dividend yield for annual dividend 4.5 and stock price 150",
+        "intent": "FORMULA_FINANCE",
+        "sql": "SELECT ROUND((4.5 / 150.0) * 100.0, 2) AS dividend_yield_pct;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_171",
+        "query": "Calculate median and range for dataset [14, 22, 29, 35, 48]",
+        "intent": "FORMULA_STATISTICS",
+        "sql": "SELECT 29.0 AS median, 34.0 AS data_range;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_172",
+        "query": "Compute sample variance for numbers 10, 14, 18, 22, 26",
+        "intent": "FORMULA_STATISTICS",
+        "sql": "SELECT 40.0 AS sample_variance, 6.32 AS sample_std_dev;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_173",
+        "query": "Calculate box office profit margin for budget 45M and gross revenue 180M",
+        "intent": "FORMULA_ENTERTAINMENT",
+        "sql": "SELECT 45.0 AS budget_m, 180.0 AS box_office_m, 300.0 AS roi_pct, 4.0 AS box_office_multiplier;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_174",
+        "query": "Movie break-even multiplier for production budget 90M and marketing spend 30M",
+        "intent": "FORMULA_ENTERTAINMENT",
+        "sql": "SELECT 120.0 AS total_cost_m, 240.0 AS estimated_break_even_m;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_175",
+        "query": "Compute audience retention drop-off percentage from 500000 opening viewers to 180000 finale viewers",
+        "intent": "FORMULA_ENTERTAINMENT",
+        "sql": "SELECT 64.0 AS drop_off_pct, 36.0 AS completion_rate_pct;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_176",
+        "query": "Calculate theatrical vs streaming revenue share for 140M theatrical and 60M OTT revenue",
+        "intent": "FORMULA_ENTERTAINMENT",
+        "sql": "SELECT 70.0 AS theatrical_share_pct, 30.0 AS streaming_share_pct;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_177",
+        "query": "Great-circle distance from latitude 40.7128 longitude -74.0060 to latitude 51.5074 longitude -0.1278",
+        "intent": "FORMULA_GEOGRAPHY",
+        "sql": "SELECT 5570.22 AS haversine_distance_km;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_178",
+        "query": "Calculate population density for 12500000 residents across 1484 square km",
+        "intent": "FORMULA_GEOGRAPHY",
+        "sql": "SELECT ROUND(12500000.0 / 1484.0, 2) AS population_density_per_sq_km;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_179",
+        "query": "Convert map scale 1:50000 distance 8 cm into real kilometers",
+        "intent": "FORMULA_GEOGRAPHY",
+        "sql": "SELECT ROUND((8.0 * 50000.0) / 100000.0, 2) AS ground_distance_km;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_180",
+        "query": "Compute urban growth rate from population 4.2 million to 5.6 million over 10 years",
+        "intent": "FORMULA_GEOGRAPHY",
+        "sql": "SELECT 2.92 AS annual_urban_growth_pct;",
+        "tables_used": [],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_181",
+        "query": "Total net sales and gross profit across all regions",
+        "intent": "AGGREGATE_SUM",
+        "sql": "SELECT SUM(net_sales) AS total_net_sales, SUM(gross_profit) AS total_gross_profit FROM global_enterprise;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_182",
+        "query": "Sum of inventory value and units sold by category",
+        "intent": "AGGREGATE_SUM",
+        "sql": "SELECT category, SUM(inventory_count) AS total_inventory FROM sarah_products GROUP BY category;",
+        "tables_used": ["sarah_products"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_183",
+        "query": "Mean discount percentage and average shipping cost per ship mode",
+        "intent": "AGGREGATE_AVG",
+        "sql": "SELECT ship_mode, ROUND(AVG(discount_pct), 2) AS avg_discount_pct, ROUND(AVG(shipping_cost), 2) AS avg_shipping_cost FROM global_enterprise GROUP BY ship_mode;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_184",
+        "query": "Average customer rating and profit margin across segments",
+        "intent": "AGGREGATE_AVG",
+        "sql": "SELECT segment, ROUND(AVG(customer_rating), 2) AS avg_rating, ROUND(AVG(profit_margin_pct), 2) AS avg_margin FROM global_enterprise GROUP BY segment;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_185",
+        "query": "How many distinct countries and products exist in the orders dataset",
+        "intent": "AGGREGATE_COUNT",
+        "sql": "SELECT COUNT(*) AS total_count FROM global_enterprise;",
+        "tables_used": ["global_enterprise"],
+        "feedback_score": 1
+    },
+    {
+        "id": "seed_186",
+        "query": "Count total matches played by each IPL city",
+        "intent": "AGGREGATE_COUNT",
+        "sql": "SELECT city, COUNT(*) AS match_count FROM ipl GROUP BY city;",
+        "tables_used": ["ipl"],
+        "feedback_score": 1
     }
 ]
 
@@ -1232,6 +1561,11 @@ class ModelStatus(BaseModel):
     vocabulary_size: int = 0
     intent_accuracy: float = 0.0
     accuracy: float = 0.0
+    cv_accuracy: float = 0.0
+    cv_f1_score: float = 0.0
+    train_accuracy: float = 0.0
+    best_c: float = 1.0
+    model_architecture: str = "Word(1-3)+Char(3-5) TF-IDF + Balanced Voting Ensemble"
     active_provider: str = "local"
     last_trained: Optional[str] = None
     classes: List[str] = Field(default_factory=list)
@@ -1240,17 +1574,23 @@ class ModelStatus(BaseModel):
 class SelfLearningEngine:
     """
     Autonomous continuous learning model for Text-to-SQL.
-    Maintains persistent memory, updates weights, and retrains locally on CPU in <50ms.
+    Implements ML engineering best practices:
+      - Dual Word + Character Subword TF-IDF FeatureUnion (typo & inflection resilience)
+      - Stratified K-Fold Cross-Validation hyperparameter selection (prevents overfitting)
+      - Calibrated Soft-Voting Ensemble (LogisticRegression + LinearSVC + ComplementNB)
     """
 
     def __init__(self):
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         MODEL_DIR.mkdir(parents=True, exist_ok=True)
         self.memory: List[TrainingSample] = []
-        self.vectorizer: Optional[TfidfVectorizer] = None
-        self.classifier: Optional[LogisticRegression] = None
+        self.vectorizer: Optional[Any] = None
+        self.classifier: Optional[Any] = None
         self.last_trained_time: Optional[float] = None
         self.accuracy: float = 0.0
+        self.cv_accuracy: float = 0.0
+        self.cv_f1_score: float = 0.0
+        self.best_c: float = 2.5
 
         self._load_memory()
         self._load_or_train_model()
@@ -1288,24 +1628,49 @@ class SelfLearningEngine:
         except Exception as e:
             logger.error(f"Failed to save training memory: {e}")
 
+    def _build_vectorizer(self) -> FeatureUnion:
+        return FeatureUnion([
+            ("word_tfidf", TfidfVectorizer(
+                ngram_range=(1, 3),
+                sublinear_tf=True,
+                min_df=1,
+                max_features=3200,
+                strip_accents="unicode",
+                lowercase=True
+            )),
+            ("char_tfidf", TfidfVectorizer(
+                analyzer="char_wb",
+                ngram_range=(3, 5),
+                sublinear_tf=True,
+                min_df=2,
+                max_features=2400,
+                lowercase=True
+            )),
+        ])
+
     def _load_or_train_model(self):
-        """Loads trained model checkpoint or trains if not found."""
+        """Loads trained ensemble checkpoint or trains from scratch if missing/legacy."""
         vec_path = MODEL_DIR / "tfidf_vectorizer.joblib"
         clf_path = MODEL_DIR / "intent_classifier.joblib"
+        meta_path = MODEL_DIR / "model_metrics.json"
 
-        if vec_path.exists() and clf_path.exists():
+        # If new seeds were merged into memory or checkpoint is legacy single-vectorizer, retrain
+        if vec_path.exists() and clf_path.exists() and meta_path.exists():
             try:
-                self.vectorizer = joblib.load(vec_path)
-                self.classifier = joblib.load(clf_path)
-                self.last_trained_time = vec_path.stat().st_mtime
-                if self.memory and self.vectorizer and self.classifier:
-                    try:
-                        X_vec = self.vectorizer.transform([s.query for s in self.memory])
-                        self.accuracy = float(accuracy_score([s.intent for s in self.memory], self.classifier.predict(X_vec)))
-                    except Exception:
-                        self.accuracy = 1.0
-                logger.info(f"Loaded pre-trained intent model checkpoint. Accuracy: {self.accuracy * 100:.1f}%.")
-                return
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    m_info = json.load(f)
+                if m_info.get("sample_count") == len(self.memory) and m_info.get("architecture") == "ensemble_v2":
+                    self.vectorizer = joblib.load(vec_path)
+                    self.classifier = joblib.load(clf_path)
+                    self.last_trained_time = vec_path.stat().st_mtime
+                    self.accuracy = float(m_info.get("accuracy", 1.0))
+                    self.cv_accuracy = float(m_info.get("cv_accuracy", self.accuracy))
+                    self.cv_f1_score = float(m_info.get("cv_f1_score", self.cv_accuracy))
+                    self.best_c = float(m_info.get("best_c", 2.5))
+                    logger.info(
+                        f"Loaded Ensemble NLP checkpoint (CV F1: {self.cv_f1_score * 100:.1f}%, Train Acc: {self.accuracy * 100:.1f}%)."
+                    )
+                    return
             except Exception as e:
                 logger.warning(f"Error loading model checkpoints: {e}")
 
@@ -1313,8 +1678,8 @@ class SelfLearningEngine:
 
     def retrain(self) -> Dict[str, Any]:
         """
-        Trains TF-IDF vectorizer and Intent Classifier on accumulated training memories.
-        Executes sub-50ms on CPU without GPU overhead.
+        Trains dual Word+Char TF-IDF features and runs Stratified K-Fold CV regularization selection
+        to fit a calibrated Soft-Voting Ensemble (LogisticRegression + LinearSVC + ComplementNB).
         """
         t0 = time.perf_counter()
         if not self.memory:
@@ -1323,37 +1688,112 @@ class SelfLearningEngine:
         X_texts = [s.query for s in self.memory]
         y_intents = [s.intent for s in self.memory]
 
-        # Vectorizer with unigrams and bigrams
-        self.vectorizer = TfidfVectorizer(ngram_range=(1, 2), min_df=1, lowercase=True)
+        self.vectorizer = self._build_vectorizer()
         X_vec = self.vectorizer.fit_transform(X_texts)
 
-        # Multi-class Classifier
-        self.classifier = LogisticRegression(C=10.0, max_iter=200, random_state=42)
-        self.classifier.fit(X_vec, y_intents)
+        # Stratified K-Fold Cross-Validation hyperparameter tuning (ML generalization check)
+        counts = Counter(y_intents)
+        min_class_n = min(counts.values()) if counts else 1
+        n_splits = min(3, min_class_n)
 
-        # Compute training accuracy
+        best_c = 2.5
+        best_cv_f1 = 0.0
+        best_cv_acc = 0.0
+
+        if n_splits >= 2:
+            skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+            for c_val in (1.5, 3.0):
+                probe = LogisticRegression(
+                    C=c_val, class_weight="balanced", max_iter=600, random_state=42
+                )
+                f1_scores = cross_val_score(probe, X_vec, y_intents, cv=skf, scoring="f1_weighted")
+                mean_f1 = float(f1_scores.mean())
+                if mean_f1 >= best_cv_f1:
+                    best_cv_f1 = mean_f1
+                    best_c = c_val
+
+            base_lr = LogisticRegression(
+                C=best_c, class_weight="balanced", max_iter=600, random_state=42
+            )
+            estimators = [("lr", base_lr), ("nb", ComplementNB(alpha=0.35))]
+            if min_class_n >= 3:
+                svc = CalibratedClassifierCV(
+                    LinearSVC(C=1.2, class_weight="balanced", random_state=42),
+                    cv=min(3, min_class_n)
+                )
+                estimators.append(("svc", svc))
+                weights = [2, 1, 2]
+            else:
+                weights = [2, 1]
+
+            ensemble = VotingClassifier(estimators=estimators, voting="soft", weights=weights)
+            try:
+                cv_acc_scores = cross_val_score(ensemble, X_vec, y_intents, cv=skf, scoring="accuracy")
+                best_cv_acc = float(cv_acc_scores.mean())
+            except Exception as cv_err:
+                logger.warning(f"Ensemble CV fallback: {cv_err}")
+                acc_scores = cross_val_score(base_lr, X_vec, y_intents, cv=skf, scoring="accuracy")
+                best_cv_acc = float(acc_scores.mean())
+
+            self.classifier = ensemble
+        else:
+            self.classifier = LogisticRegression(
+                C=best_c, class_weight="balanced", max_iter=800, random_state=42
+            )
+
+        self.classifier.fit(X_vec, y_intents)
         preds = self.classifier.predict(X_vec)
         self.accuracy = float(accuracy_score(y_intents, preds))
+        self.cv_accuracy = best_cv_acc if best_cv_acc > 0 else self.accuracy
+        self.cv_f1_score = best_cv_f1 if best_cv_f1 > 0 else self.accuracy
+        self.best_c = best_c
         self.last_trained_time = time.time()
 
-        # Save model artifacts
+        # Persist artifacts & validation metrics
         try:
             joblib.dump(self.vectorizer, MODEL_DIR / "tfidf_vectorizer.joblib")
             joblib.dump(self.classifier, MODEL_DIR / "intent_classifier.joblib")
+            with open(MODEL_DIR / "model_metrics.json", "w", encoding="utf-8") as mf:
+                json.dump({
+                    "architecture": "ensemble_v2",
+                    "sample_count": len(self.memory),
+                    "accuracy": self.accuracy,
+                    "cv_accuracy": self.cv_accuracy,
+                    "cv_f1_score": self.cv_f1_score,
+                    "best_c": self.best_c
+                }, mf, indent=2)
         except Exception as e:
             logger.error(f"Failed to persist model checkpoints: {e}")
 
         elapsed_ms = (time.perf_counter() - t0) * 1000.0
-        logger.info(f"Retrained Local NLP Model in {elapsed_ms:.1f}ms. Accuracy: {self.accuracy * 100:.1f}%.")
+        voc_size = self._get_vocab_size()
+        logger.info(
+            f"Retrained Ensemble NLP Model in {elapsed_ms:.1f}ms. "
+            f"CV Acc: {self.cv_accuracy * 100:.1f}%, CV F1: {self.cv_f1_score * 100:.1f}%, "
+            f"Train Acc: {self.accuracy * 100:.1f}% ({voc_size} features)."
+        )
 
         return {
             "success": True,
             "sample_count": len(self.memory),
             "accuracy": self.accuracy,
-            "vocabulary_size": len(self.vectorizer.vocabulary_),
+            "cv_accuracy": self.cv_accuracy,
+            "cv_f1_score": self.cv_f1_score,
+            "best_c": self.best_c,
+            "vocabulary_size": voc_size,
             "training_time_ms": elapsed_ms,
             "classes": list(self.classifier.classes_)
         }
+
+    def _get_vocab_size(self) -> int:
+        if not self.vectorizer:
+            return 0
+        if hasattr(self.vectorizer, "vocabulary_"):
+            return len(self.vectorizer.vocabulary_)
+        try:
+            return len(self.vectorizer.get_feature_names_out())
+        except Exception:
+            return 0
 
     def predict_intent(self, query: str) -> Tuple[str, float]:
         """Predicts the analytical intent category of a query with confidence score."""
@@ -1367,19 +1807,59 @@ class SelfLearningEngine:
         confidence = float(probs[max_idx])
         return intent, confidence
 
-    def find_similar_sample(self, query: str, threshold: float = 0.82) -> Optional[TrainingSample]:
-        """Finds closest learned query in memory using cosine similarity."""
+    def find_similar_sample(
+        self,
+        query: str,
+        threshold: float = 0.88,
+        allowed_tables: Optional[List[str]] = None
+    ) -> Optional[TrainingSample]:
+        """Finds closest schema-compatible learned query in memory using cosine similarity."""
         if not self.vectorizer or not self.memory:
             return None
 
         from sklearn.metrics.pairwise import cosine_similarity
+        q_low = query.lower()
+        allowed_set = {t.lower() for t in allowed_tables} if allowed_tables is not None else None
+
+        # Detect any tables explicitly mentioned in the user query
+        explicitly_named_tables = set()
+        if allowed_set:
+            for t in allowed_set:
+                t_phrase = t.replace("_", " ")
+                if re.search(rf"\b{re.escape(t)}\b", q_low) or re.search(rf"\b{re.escape(t_phrase)}\b", q_low):
+                    explicitly_named_tables.add(t)
+
+        # Build candidate subset matching schema & table constraints
+        candidate_indices = []
+        for idx, s in enumerate(self.memory):
+            s_tables = {t.lower() for t in (s.tables_used or [])}
+            if allowed_set is not None and s_tables:
+                if not s_tables.issubset(allowed_set):
+                    continue
+            if explicitly_named_tables and s_tables:
+                if not (explicitly_named_tables & s_tables):
+                    continue
+            # Auto-recorded non-corrected generic interactions should require near-exact match
+            candidate_indices.append(idx)
+
+        if not candidate_indices:
+            return None
+
         vec_q = self.vectorizer.transform([query])
-        vec_mem = self.vectorizer.transform([s.query for s in self.memory])
+        vec_mem = self.vectorizer.transform([self.memory[i].query for i in candidate_indices])
         sims = cosine_similarity(vec_q, vec_mem)[0]
 
-        best_idx = int(sims.argmax())
-        if sims[best_idx] >= threshold:
-            return self.memory[best_idx]
+        best_local_idx = int(sims.argmax())
+        best_score = float(sims[best_local_idx])
+        best_sample = self.memory[candidate_indices[best_local_idx]]
+
+        # Require stricter threshold for unverified auto-recorded samples vs curated seeds/corrections
+        effective_threshold = threshold
+        if best_sample.id.startswith("trn_") and not best_sample.corrected_sql:
+            effective_threshold = max(threshold, 0.96)
+
+        if best_score >= effective_threshold:
+            return best_sample
         return None
 
     def record_interaction(
@@ -1417,18 +1897,24 @@ class SelfLearningEngine:
         return sample
 
     def get_status(self, active_provider: str = "local") -> ModelStatus:
-        """Returns comprehensive diagnostic metrics of the local trained model."""
-        voc_size = len(self.vectorizer.vocabulary_) if self.vectorizer else 0
+        """Returns comprehensive diagnostic metrics of the local trained ensemble model."""
+        voc_size = self._get_vocab_size()
         classes = list(self.classifier.classes_) if self.classifier else []
         last_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.last_trained_time)) if self.last_trained_time else None
 
         acc_pct = round(self.accuracy * 100.0, 1)
+        cv_acc_pct = round(self.cv_accuracy * 100.0, 1)
+        cv_f1_pct = round(self.cv_f1_score * 100.0, 1)
         return ModelStatus(
             is_trained=bool(self.classifier is not None),
             sample_count=len(self.memory),
             vocabulary_size=voc_size,
             intent_accuracy=acc_pct,
             accuracy=acc_pct,
+            cv_accuracy=cv_acc_pct,
+            cv_f1_score=cv_f1_pct,
+            train_accuracy=acc_pct,
+            best_c=self.best_c,
             active_provider=active_provider,
             last_trained=last_str,
             classes=classes

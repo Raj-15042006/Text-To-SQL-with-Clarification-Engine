@@ -20,7 +20,7 @@ class QuerySession(BaseModel):
     session_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     conversation_id: Optional[str] = None
     original_query: str
-    status: str = "initialized"  # "analyzing", "awaiting_clarification", "generating", "ready", "executed", "error"
+    status: str = "initialized"  # "analyzing", "awaiting_clarification", "generating", "ready", "executed", "error", "schema_gap", "no_dataset"
     analysis: Optional[QueryAnalysis] = None
     clarifications: List[ClarificationTurn] = Field(default_factory=list)
     resolved_query: Optional[str] = None
@@ -32,6 +32,20 @@ class QuerySession(BaseModel):
     relationships_used: List[str] = Field(default_factory=list)
     is_ambiguous: Optional[bool] = None
     ambiguity_category: Optional[str] = None
+    ambiguity_score: float = 0.0
+    thinking_steps: List[Dict[str, str]] = Field(default_factory=list)
+    assumptions: List[Dict[str, Any]] = Field(default_factory=list)
+    provenance: List[Dict[str, str]] = Field(default_factory=list)
+    confidence_score: int = 90
+    confidence_level: str = "High"
+    confidence_reasons: List[str] = Field(default_factory=list)
+    data_quality_warnings: List[str] = Field(default_factory=list)
+    pii_columns: List[str] = Field(default_factory=list)
+    pii_warning: Optional[str] = None
+    cost_info: Optional[Dict[str, Any]] = None
+    ask_after_answer: Optional[Dict[str, Any]] = None
+    schema_gap: Optional[Dict[str, Any]] = None
+    tables_used: List[str] = Field(default_factory=list)
     error_message: Optional[str] = None
     created_at: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())
     updated_at: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())

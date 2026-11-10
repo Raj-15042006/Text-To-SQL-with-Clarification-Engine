@@ -34,3 +34,11 @@ desktop.ini
 *.sqlite3
 *.db
 
+# Runtime user state & local uploads
+data/audit_log.json
+data/semantic_memory.json
+data/clarification_replays.json
+data/relationships.json
+data/uploads/
+
+

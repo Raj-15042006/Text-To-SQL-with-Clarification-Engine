@@ -166,7 +166,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupEventHandlers();
   await initAuth();
   fetchSchema();
-  fetchRelationships();
   fetchConversations();
   fetchModelStatus();
 });
@@ -586,11 +585,19 @@ async function fetchModelStatus() {
       }
     }
 
-    // Update modal metrics
-    const rawAcc = data.accuracy !== undefined ? data.accuracy : (data.intent_accuracy !== undefined ? data.intent_accuracy : 100);
-    const accPct = Math.round(rawAcc <= 1.0 ? rawAcc * 100 : rawAcc);
+    // Update modal metrics (CV Accuracy, Weighted F1 & Architecture)
+    const rawCv = (data.cv_accuracy !== undefined && data.cv_accuracy > 0) ? data.cv_accuracy : (data.accuracy !== undefined ? data.accuracy : (data.intent_accuracy !== undefined ? data.intent_accuracy : 100));
+    const accPct = Math.round(rawCv <= 1.0 ? rawCv * 100 : rawCv);
+    const f1Raw = data.cv_f1_score || 0;
+    const f1Pct = f1Raw > 0 ? `${Math.round(f1Raw <= 1.0 ? f1Raw * 100 : f1Raw)}%` : "--";
     if (metricSamples) metricSamples.innerText = data.sample_count || 0;
     if (metricAccuracy) metricAccuracy.innerText = `${accPct}%`;
+    const metricCvF1 = document.getElementById("metric-cv-f1");
+    if (metricCvF1) metricCvF1.innerText = f1Pct;
+    const modelArchLbl = document.getElementById("model-arch-label");
+    if (modelArchLbl && data.model_architecture) {
+      modelArchLbl.innerText = data.model_architecture;
+    }
     if (metricVocab) metricVocab.innerText = data.vocabulary_size || 0;
     if (metricLatency) metricLatency.innerText = "< 1ms";
     if (modelMetricsStatus) {
@@ -1282,11 +1289,22 @@ function renderConversation(conv) {
         appendClarificationCard(msg.clarification, msg.session_id);
       } else {
         appendAssistantCard({
+          session_id: msg.session_id,
           user_query: lastUserQuery,
           natural_explanation: msg.content,
           generated_sql: msg.sql,
           sql_explanation: msg.sql_explanation,
           relationships_used: msg.relationships,
+          thinking_steps: msg.thinking_steps || [],
+          assumptions: msg.assumptions || [],
+          provenance: msg.provenance || [],
+          confidence_score: msg.confidence_score,
+          confidence_level: msg.confidence_level,
+          confidence_reasons: msg.confidence_reasons || [],
+          data_quality_warnings: msg.data_quality_warnings || [],
+          pii_warning: msg.pii_warning || null,
+          cost_info: msg.cost_info || null,
+          ask_after_answer: msg.ask_after_answer || null,
           execution: {
             columns: msg.columns,
             rows: msg.rows,
@@ -1341,6 +1359,10 @@ async function handleQuerySubmit() {
   const query = queryInput.value.trim();
   if (!query || isSubmitting) return;
 
+  if (window.erdDiagram && typeof window.erdDiagram.switchView === "function") {
+    window.erdDiagram.switchView("chat");
+  }
+
   isSubmitting = true;
   setComposerLoading(true);
   hideNotification();
@@ -1350,7 +1372,7 @@ async function handleQuerySubmit() {
   appendUserMessageBubble(query, new Date().toISOString());
 
   // Show dynamic progressive loading indicator
-  startProgressiveLoading("⚡ Analyzing intent & context across universal domains...");
+  startProgressiveLoading("🧠 Thinking: Decomposing prompt & checking Personal Memory...");
   scrollChatToBottom();
 
   // Clear composer input immediately for snappy feel
@@ -1359,9 +1381,13 @@ async function handleQuerySubmit() {
   if (btnClearPrompt) btnClearPrompt.style.display = "none";
 
   try {
+    const modeSel = document.getElementById("select-answer-mode");
+    const piiChk = document.getElementById("toggle-mask-pii");
     const payload = {
       query: query,
-      conversation_id: activeConversationId
+      conversation_id: activeConversationId,
+      answer_mode: modeSel ? modeSel.value : "smart",
+      mask_pii: piiChk ? Boolean(piiChk.checked) : false
     };
 
     const res = await fetch("/api/query", {
@@ -1397,9 +1423,12 @@ async function handleQuerySubmit() {
       appendAssistantCard(currentSession);
     }
 
-    // Refresh sidebar conversations and model learning metrics
+    // Refresh sidebar conversations, model learning metrics & governance summary
     fetchConversations();
     fetchModelStatus();
+    if (window.IntelligenceUI && typeof window.IntelligenceUI.refreshSummary === "function") {
+      window.IntelligenceUI.refreshSummary();
+    }
   } catch (err) {
     stopProgressiveLoading();
     appendAssistantCard({
@@ -1414,10 +1443,17 @@ async function handleQuerySubmit() {
   }
 }
 
+window.ClarifyRunQuery = function (qText) {
+  if (!qText || !queryInput) return;
+  queryInput.value = qText;
+  queryInput.style.height = "auto";
+  handleQuerySubmit();
+};
+
 // ==========================================================================
 // Clarification Choice Handler
 // ==========================================================================
-async function handleClarifySelection(sessionId, optionId, customText, cardEl) {
+async function handleClarifySelection(sessionId, optionId, customText, cardEl, questionUseful = null) {
   if (isSubmitting) return;
   isSubmitting = true;
   setComposerLoading(true);
@@ -1426,14 +1462,14 @@ async function handleClarifySelection(sessionId, optionId, customText, cardEl) {
     cardEl.classList.add("selected");
   }
 
-  startProgressiveLoading("⚙️ Applying selection & compiling SQL...");
+  startProgressiveLoading("⚙️ Analyzing clarification & compiling verified SQL...");
   scrollChatToBottom();
 
   try {
     const res = await fetch(`/api/query/${sessionId}/clarify`, {
       method: "POST",
       headers: getAuthHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ option_id: optionId, custom_text: customText })
+      body: JSON.stringify({ option_id: optionId, custom_text: customText, question_useful: questionUseful })
     });
 
     stopProgressiveLoading();
@@ -1451,6 +1487,9 @@ async function handleClarifySelection(sessionId, optionId, customText, cardEl) {
     appendAssistantCard(currentSession);
     fetchConversations();
     fetchModelStatus();
+    if (window.IntelligenceUI && typeof window.IntelligenceUI.refreshSummary === "function") {
+      window.IntelligenceUI.refreshSummary();
+    }
   } catch (err) {
     stopProgressiveLoading();
     appendAssistantCard({
@@ -1514,21 +1553,50 @@ function appendClarificationCard(clarify, sessionId, analysis = null) {
       <input type="text" class="custom-clarify-inline" placeholder="Or specify custom requirement..." id="custom-in-${sessionId}">
       <button class="btn btn-secondary btn-sm" id="btn-custom-${sessionId}">Apply</button>
     </div>
+    <div class="clarify-q-feedback" id="clarify-qfb-${sessionId}">
+      <span>Was this clarifying question helpful?</span>
+      <button type="button" class="btn-qfb" id="qfb-yes-${sessionId}" title="Useful clarification">👍 Yes</button>
+      <button type="button" class="btn-qfb" id="qfb-no-${sessionId}" title="Unnecessary question">👎 No</button>
+    </div>
   `;
+
+  let qUsefulFlag = null;
+  const qYesBtn = card.querySelector(`#qfb-yes-${sessionId}`);
+  const qNoBtn = card.querySelector(`#qfb-no-${sessionId}`);
+  if (qYesBtn && qNoBtn) {
+    qYesBtn.addEventListener("click", () => {
+      qUsefulFlag = true;
+      qYesBtn.classList.add("selected");
+      qNoBtn.classList.remove("selected");
+      if (window.IntelligenceUI) window.IntelligenceUI.submitDualFeedback(sessionId, null, null, 1);
+    });
+    qNoBtn.addEventListener("click", () => {
+      qUsefulFlag = false;
+      qNoBtn.classList.add("selected");
+      qYesBtn.classList.remove("selected");
+      if (window.IntelligenceUI) window.IntelligenceUI.submitDualFeedback(sessionId, null, null, -1);
+    });
+  }
 
   const optsContainer = card.querySelector(`#clarify-opts-${sessionId}`);
   clarify.options.forEach(opt => {
     const optBtn = document.createElement("button");
     optBtn.className = "option-card";
+    const rowsBadge = (opt.estimated_rows !== undefined && opt.estimated_rows !== null)
+      ? `<span class="opt-whatif-pill">~${escapeHtml(opt.estimated_rows)} rows</span>`
+      : "";
     optBtn.innerHTML = `
-      <span class="opt-title">${escapeHtml(opt.label)}</span>
+      <div class="opt-top-row">
+        <span class="opt-title">${escapeHtml(opt.label)}</span>
+        ${rowsBadge}
+      </div>
       <span class="opt-desc">${escapeHtml(opt.description || opt.implied_filter_or_metric || "")}</span>
     `;
 
     optBtn.addEventListener("click", () => {
       optsContainer.querySelectorAll(".option-card").forEach(c => c.classList.remove("selected"));
       optBtn.classList.add("selected");
-      handleClarifySelection(sessionId, opt.id, null, optBtn);
+      handleClarifySelection(sessionId, opt.id, null, optBtn, qUsefulFlag);
     });
 
     optsContainer.appendChild(optBtn);
@@ -1538,7 +1606,7 @@ function appendClarificationCard(clarify, sessionId, analysis = null) {
   const customBtn = card.querySelector(`#btn-custom-${sessionId}`);
   customBtn.addEventListener("click", () => {
     const val = customInput.value.trim();
-    if (val) handleClarifySelection(sessionId, null, val, null);
+    if (val) handleClarifySelection(sessionId, null, val, null, qUsefulFlag);
   });
 
   turn.appendChild(card);
@@ -1580,6 +1648,16 @@ function appendAssistantCard(session) {
     return;
   }
 
+  // Check for Schema-Gap Guard state (never hallucinate missing columns/tables)
+  const uid = Math.random().toString(36).substring(2, 9);
+  if (session.status === "schema_gap" && window.IntelligenceUI) {
+    card.innerHTML = window.IntelligenceUI.buildThinkingAccordionHtml(session, uid) + window.IntelligenceUI.buildSchemaGapCardHtml(session);
+    window.IntelligenceUI.wireCardEvents(card, session, uid);
+    turn.appendChild(card);
+    chatThread.appendChild(turn);
+    return;
+  }
+
   // Check for error state without generated SQL
   const isError = session.status === "error" || Boolean(session.error_message);
   if (isError && !session.generated_sql) {
@@ -1599,7 +1677,8 @@ function appendAssistantCard(session) {
     return;
   }
 
-  // Header
+  // Header with Confidence & Cost Guardrail Pills
+  const headerMetaHtml = (!isError && window.IntelligenceUI) ? window.IntelligenceUI.buildHeaderMetaHtml(session, uid) : "";
   const headerHtml = `
     <div class="assistant-header">
       <div class="assistant-identity">
@@ -1608,13 +1687,22 @@ function appendAssistantCard(session) {
         </span>
         <span class="assistant-title">${isError ? 'Execution Notice' : 'AI Answer'}</span>
       </div>
-      <span class="assistant-tag" style="${isError ? 'background:rgba(215,0,21,0.1); color:#d70015;' : ''}">${isError ? 'Needs Tuning' : 'Direct Insight'}</span>
+      <div class="assistant-header-right">
+        ${headerMetaHtml}
+        <span class="assistant-tag" style="${isError ? 'background:rgba(215,0,21,0.1); color:#d70015;' : ''}">${isError ? 'Needs Tuning' : 'Direct Insight'}</span>
+      </div>
     </div>
   `;
+
+  const thinkingHtml = window.IntelligenceUI ? window.IntelligenceUI.buildThinkingAccordionHtml(session, uid) : "";
+  const govAlertsHtml = window.IntelligenceUI ? window.IntelligenceUI.buildGovernanceAlertsHtml(session) : "";
+  const askAfterHtml = window.IntelligenceUI ? window.IntelligenceUI.buildAskAfterBannerHtml(session, uid) : "";
 
   // Narrative Body
   const narrativeText = isError ? (session.error_message || "An error occurred.") : (session.natural_explanation || "Query completed successfully.");
   const narrativeHtml = `<div class="analysis-body" style="${isError ? 'color:#d70015;' : ''}">${renderMarkdownExplanation(narrativeText)}</div>`;
+
+  const assumptionsHtml = (!isError && window.IntelligenceUI) ? window.IntelligenceUI.buildAssumptionsHtml(session, uid) : "";
 
   // Relational Banner (if joins/relationships were used)
   let relationsHtml = "";
@@ -1634,9 +1722,10 @@ function appendAssistantCard(session) {
     `;
   }
 
+  const provenanceHtml = window.IntelligenceUI ? window.IntelligenceUI.buildProvenanceHtml(session, uid) : "";
+
   // Collapsible SQL Inspector
   let sqlHtml = "";
-  const uid = Math.random().toString(36).substring(2, 9);
   if (session.generated_sql) {
     sqlHtml = `
       <div class="sql-action-row" style="display:flex; justify-content:flex-end;">
@@ -1739,6 +1828,9 @@ function appendAssistantCard(session) {
           <button class="btn-feedback" id="btn-thumb-up-${uid}" title="Reinforce this SQL in model memory">
             <span>👍 Accurate</span>
           </button>
+          <button class="btn-feedback" id="btn-thumb-down-${uid}" title="Mark answer as unhelpful / needs correction">
+            <span>👎 Unhelpful</span>
+          </button>
           <button class="btn-feedback" id="btn-edit-teach-${uid}" title="Provide corrected SQL to train model">
             <span>✏️ Teach / Edit SQL</span>
           </button>
@@ -1755,7 +1847,10 @@ function appendAssistantCard(session) {
     `;
   }
 
-  card.innerHTML = headerHtml + narrativeHtml + relationsHtml + sqlHtml + tableHtml + followupsHtml + feedbackHtml;
+  card.innerHTML = headerHtml + thinkingHtml + govAlertsHtml + askAfterHtml + narrativeHtml + assumptionsHtml + relationsHtml + provenanceHtml + sqlHtml + tableHtml + followupsHtml + feedbackHtml;
+  if (window.IntelligenceUI) {
+    window.IntelligenceUI.wireCardEvents(card, session, uid);
+  }
 
   // Wire SQL Toggle & Copy buttons for this specific card
   const toggleSqlBtn = card.querySelector(`#btn-toggle-sql-${uid}`);
@@ -1797,6 +1892,7 @@ function appendAssistantCard(session) {
 
   // Wire Self-Learning Feedback Buttons
   const thumbUpBtn = card.querySelector(`#btn-thumb-up-${uid}`);
+  const thumbDownBtn = card.querySelector(`#btn-thumb-down-${uid}`);
   const editTeachBtn = card.querySelector(`#btn-edit-teach-${uid}`);
   const editorBox = card.querySelector(`#fb-editor-${uid}`);
   const cancelTeachBtn = card.querySelector(`#btn-cancel-teach-${uid}`);
@@ -1809,7 +1905,20 @@ function appendAssistantCard(session) {
       thumbUpBtn.classList.add("active-pos");
       thumbUpBtn.innerHTML = `<span>✓ Reinforced in Model</span>`;
       await submitModelFeedback(queryText, session.generated_sql, 1, null, session.tables_used || []);
+      if (window.IntelligenceUI) window.IntelligenceUI.submitDualFeedback(session.session_id, queryText, 1, null);
       showNotification("success", "Query reinforced into model training memory!");
+    });
+  }
+
+  if (thumbDownBtn) {
+    thumbDownBtn.addEventListener("click", async () => {
+      thumbDownBtn.disabled = true;
+      thumbDownBtn.classList.add("active-neg");
+      thumbDownBtn.innerHTML = `<span>👎 Flagged</span>`;
+      await submitModelFeedback(queryText, session.generated_sql, -1, null, session.tables_used || []);
+      if (window.IntelligenceUI) window.IntelligenceUI.submitDualFeedback(session.session_id, queryText, -1, null);
+      if (editorBox) editorBox.style.display = "flex";
+      showNotification("info", "Marked unhelpful — you can edit the SQL below to teach the AI.");
     });
   }
 
@@ -1891,10 +2000,10 @@ function startProgressiveLoading(initialText) {
     progressiveLoadingTimer = null;
   }
   const stages = [
-    "⚡ Analyzing intent & context...",
-    "🔍 Checking schema & domain formulas...",
-    "⚙️ Compiling SQL & querying PostgreSQL...",
-    "✨ Formatting insights & data..."
+    "🧠 Thinking: Decomposing prompt & checking Personal Memory...",
+    "🔍 Analyzing: Scoring schema graphs, joins & divergence probes...",
+    "🛡️ Verifying: Validating SQLGlot AST, cost & PII guardrails...",
+    "✨ Synthesizing: Formatting figures, insights & provenance..."
   ];
   let stageIndex = 0;
   showLoadingBubble(initialText || stages[0]);
@@ -1960,6 +2069,10 @@ async function fetchSchema() {
     if (!res.ok) throw new Error("Could not load schema.");
     activeSchema = await res.json();
     renderSidebarTables(activeSchema);
+    if (window.erdDiagram && typeof window.erdDiagram.onSchemaUpdated === "function") {
+      window.erdDiagram.onSchemaUpdated(activeSchema);
+    }
+    fetchRelationships();
 
     // Update Status Labels
     if (activeSchema.source_type === "postgresql") {
@@ -2052,23 +2165,50 @@ async function fetchRelationships() {
     const data = await res.json();
     const rels = data.relationships || [];
 
+    // Update Top Nav badge count
+    const navRelCount = document.getElementById("nav-rel-count");
+    if (navRelCount) {
+      const activeCount = rels.filter(r => r.is_active !== false).length;
+      navRelCount.innerText = String(activeCount);
+    }
+
+    // Notify Model Diagram controller
+    if (window.erdDiagram && typeof window.erdDiagram.onRelationshipsUpdated === "function") {
+      window.erdDiagram.onRelationshipsUpdated(data);
+    }
+
     sidebarRelationList.innerHTML = "";
     if (rels.length === 0) {
-      sidebarRelationList.innerHTML = "<div class='empty-state'>No foreign keys defined</div>";
+      sidebarRelationList.innerHTML = "<div class='empty-state'>No relationships defined yet.<br><span style='font-size:11px;opacity:0.8;'>Open Model Diagram or + Add Link to configure joins.</span></div>";
       return;
     }
 
     rels.forEach((rel) => {
       const card = document.createElement("div");
-      card.className = "relation-card";
+      const isActive = rel.is_active !== false;
+      card.className = `relation-card ${isActive ? "" : "inactive-rel"}`;
+      const typeLabel = rel.is_manual ? "Manual" : (rel.cardinality || "FK");
       card.innerHTML = `
         <div class="relation-card-header">
-          <span class="relation-path">${escapeHtml(rel.source_table)} → ${escapeHtml(rel.target_table)}</span>
-          <span class="relation-type">Foreign Key</span>
+          <span class="relation-path">${escapeHtml(rel.source_table)} &rarr; ${escapeHtml(rel.target_table)}</span>
+          <span class="relation-type ${rel.is_manual ? 'manual-tag' : ''}">${isActive ? escapeHtml(typeLabel) : 'Inactive'}</span>
         </div>
         <div class="relation-condition">${escapeHtml(rel.join_condition)}</div>
-        <div class="relation-action">Query linked records →</div>
+        <div class="relation-card-footer">
+          <span class="relation-action">Query linked records &rarr;</span>
+          <button class="btn-rel-card-edit" title="Configure Relationship">&#9998;</button>
+        </div>
       `;
+
+      const editBtn = card.querySelector(".btn-rel-card-edit");
+      if (editBtn) {
+        editBtn.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          if (window.erdDiagram && typeof window.erdDiagram.openEditModal === "function") {
+            window.erdDiagram.openEditModal(rel);
+          }
+        });
+      }
 
       card.addEventListener("click", () => {
         queryInput.value = `Show ${rel.source_table} linked to ${rel.target_table} with details`;

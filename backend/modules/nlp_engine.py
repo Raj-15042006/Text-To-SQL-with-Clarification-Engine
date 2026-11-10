@@ -22,7 +22,7 @@ class ExtractedSlot(BaseModel):
 class QuerySlots(BaseModel):
     tables: List[str] = Field(default_factory=list)
     projections: List[Tuple[str, Optional[str]]] = Field(default_factory=list)  # (column_or_expr, alias)
-    aggregations: List[Dict[str, str]] = Field(default_factory=list)  # {"func": "SUM", "column": "revenue"}
+    aggregations: List[Dict[str, str]] = Field(default_factory=list)  # {"func": "SUM", "column": "revenue", "alias": "..."}
     filters: List[Dict[str, Any]] = Field(default_factory=list)  # {"column": "score", "op": ">=", "value": 40} or {"raw": "score > 80"}
     group_by: List[str] = Field(default_factory=list)
     order_by: Optional[Dict[str, str]] = Field(default=None)  # {"column": "revenue", "direction": "DESC"}
@@ -32,6 +32,9 @@ class QuerySlots(BaseModel):
     formula_expression: Optional[str] = None
     is_context_followup: bool = False
     context_notes: Optional[str] = None
+    matched_columns: List[Dict[str, Any]] = Field(default_factory=list)
+    table_scores: Dict[str, int] = Field(default_factory=dict)
+    wants_figures: bool = False
 
 
 class LocalNLPEngine:
@@ -59,6 +62,7 @@ class LocalNLPEngine:
         "presence": "attendance_percentage",
         "dept": "departments",
         "department": "departments",
+        "departments": "departments",
         "courses": "courses",
         "subjects": "courses",
         "classes": "courses",
@@ -66,6 +70,29 @@ class LocalNLPEngine:
         "pupils": "students",
         "learners": "students",
         "candidates": "students",
+        # Business, Sales & Geo Column Synonyms
+        "countries": "country",
+        "country": "country",
+        "categories": "category",
+        "category": "category",
+        "cities": "city",
+        "regions": "region",
+        "region": "region",
+        "states": "state_province",
+        "state": "state_province",
+        "price": "unit_price",
+        "prices": "unit_price",
+        "cost": "unit_cost",
+        "costs": "total_cost",
+        "profit": "net_profit",
+        "profits": "net_profit",
+        "margin": "profit_margin_pct",
+        "inventory": "inventory_count",
+        "stock": "inventory_count",
+        "discount": "discount_amount",
+        "rating": "customer_rating",
+        "ratings": "customer_rating",
+        "status": "order_status",
         # Cricket & Sports Domain
         "wicket": "best_bowling",
         "wickets": "best_bowling",
@@ -89,10 +116,6 @@ class LocalNLPEngine:
         "game": "ipl",
         "games": "ipl",
         "cricket": "ipl",
-        "product": "sarah_products",
-        "products": "sarah_products",
-        "item": "sarah_products",
-        "items": "sarah_products"
     }
 
     AGG_PATTERNS = {
@@ -106,6 +129,15 @@ class LocalNLPEngine:
     SORT_PATTERNS = {
         "DESC": re.compile(r"\b(desc|descending|highest\s+first|most|top|best|maximum|decreasing)\b", re.I),
         "ASC": re.compile(r"\b(asc|ascending|lowest\s+first|least|bottom|worst|increasing)\b", re.I),
+    }
+
+    STOPWORDS = {
+        "in", "on", "at", "to", "for", "with", "by", "of", "from", "the", "a", "an", "and",
+        "or", "is", "are", "was", "were", "be", "all", "any", "some", "them", "his", "her",
+        "their", "our", "its", "it", "me", "my", "we", "us", "who", "which", "what", "where",
+        "when", "why", "how", "show", "list", "give", "get", "find", "tell", "calculate",
+        "compute", "select", "many", "much", "total", "count", "average", "avg", "sum", "number",
+        "each", "figures", "figure", "data", "following", "columns", "column", "retrieve", "dataset"
     }
 
     FORMULA_PATTERNS = [
@@ -538,6 +570,213 @@ class LocalNLPEngine:
 
         return None
 
+    @staticmethod
+    def _singularize(word: str) -> str:
+        w = word.lower().strip()
+        if w.endswith("ies") and len(w) > 4:
+            return w[:-3] + "y"
+        if w.endswith(("ches", "shes", "xes", "zes", "ses")) and len(w) > 4:
+            return w[:-2]
+        if w.endswith("s") and not w.endswith("ss") and w != "sales" and len(w) > 3:
+            return w[:-1]
+        return w
+
+    @staticmethod
+    def _is_numeric_type(data_type: str) -> bool:
+        dt = (data_type or "").upper()
+        return any(ty in dt for ty in ("INT", "NUMERIC", "FLOAT", "REAL", "DECIMAL", "DOUBLE", "SERIAL"))
+
+    @staticmethod
+    def _is_metric_col_name(col_name: str) -> bool:
+        c = col_name.lower()
+        if c == "id" or c.endswith("_id") or c in ("postal_code", "zip", "zipcode"):
+            return False
+        return True
+
+    def _match_columns_and_tables(
+        self,
+        q_lower: str,
+        tokens: List[str],
+        schema: DatabaseSchema,
+        stopwords: Set[str]
+    ) -> Tuple[List[Dict[str, Any]], Dict[str, int], Set[str]]:
+        """
+        Performs multi-word phrase, singular/plural stem, synonym, and fuzzy column matching
+        across all tables, returning ordered matched columns and weighted table relevance scores.
+        """
+        matched_columns_map: Dict[Tuple[str, str], Dict[str, Any]] = {}
+        table_scores: Dict[str, int] = {t: 0 for t in schema.tables.keys()}
+        candidate_tables: Set[str] = set()
+
+        # Table-level matching
+        for tbl_name in schema.tables.keys():
+            t_low = tbl_name.lower()
+            t_space = t_low.replace("_", " ")
+            t_sing = self._singularize(t_low)
+
+            # Explicit preposition + table name (e.g. "from sales", "in global_enterprise")
+            m_explicit_tbl = re.search(rf"\b(?:from|in|of|on|table|dataset)\s+(?:{re.escape(t_low)}|{re.escape(t_space)})\b", q_lower)
+            if m_explicit_tbl:
+                table_scores[tbl_name] += 28
+                candidate_tables.add(tbl_name)
+                continue
+
+            # Standalone table mention (avoid penalizing when "sales" appears solely inside "net sales" / "gross sales")
+            q_for_tbl = q_lower
+            if t_low == "sales":
+                q_for_tbl = re.sub(r"\b(?:net|gross)\s+sales\b", " ", q_for_tbl)
+
+            if re.search(rf"\b(?:{re.escape(t_low)}|{re.escape(t_space)})\b", q_for_tbl):
+                table_scores[tbl_name] += 15
+                candidate_tables.add(tbl_name)
+                continue
+
+            for tok in tokens:
+                if tok in stopwords or len(tok) < 3:
+                    continue
+                if t_low == "sales" and tok == "sales" and not re.search(r"\bsales\b", q_for_tbl):
+                    continue
+                tok_sing = self._singularize(tok)
+                syn = self.SYNONYMS.get(tok, tok)
+                if tok_sing == t_sing or syn == t_low or fuzz.ratio(tok_sing, t_sing) >= 85:
+                    table_scores[tbl_name] += 10
+                    candidate_tables.add(tbl_name)
+                elif len(tok) >= 4 and (tok in t_low or t_low in tok):
+                    table_scores[tbl_name] += 5
+                    candidate_tables.add(tbl_name)
+
+        # Build semantic phrase aliases for columns
+        phrase_to_col_candidates = [
+            (r"\bnet\s+sales?\b", ["net_sales", "revenue"], 98),
+            (r"\bgross\s+sales?\b", ["gross_sales", "revenue"], 98),
+            (r"\btotal\s+revenue\b|\brevenue\b", ["revenue", "total_revenue", "gross_sales", "net_sales"], 92),
+            (r"\bnet\s+profit\b|\bprofit\b|\bprofits\b", ["net_profit", "gross_profit", "profit"], 92),
+            (r"\bgross\s+profit\b", ["gross_profit", "net_profit"], 96),
+            (r"\bprofit\s+margin\b|\bmargin\b", ["profit_margin_pct", "margin"], 92),
+            (r"\bunit\s+price\b|\bprices?\b", ["unit_price", "price"], 92),
+            (r"\bunit\s+cost\b|\btotal\s+cost\b|\bcosts?\b", ["total_cost", "unit_cost", "cost"], 90),
+            (r"\bproducts?\b|\bproduct\s+name\b", ["product_name", "product", "item_name"], 88),
+            (r"\bcountr(?:y|ies)\b", ["country"], 95),
+            (r"\bcit(?:y|ies)\b", ["city", "store_city", "customer_city"], 90),
+            (r"\bstore\s+cit(?:y|ies)\b", ["store_city", "city"], 96),
+            (r"\bcustomer\s+cit(?:y|ies)\b", ["customer_city", "city"], 96),
+            (r"\bunits?\s+sold\b|\bquantit(?:y|ies)\b", ["units_sold", "quantity"], 92),
+            (r"\binventory\b|\bstock\b", ["inventory_count", "inventory", "stock"], 92),
+            (r"\bscores?\b|\bmarks?\b", ["score"], 95),
+            (r"\battendance\b", ["attendance_percentage"], 95),
+        ]
+
+        def record_match(tbl_n: str, col_obj: ColumnMeta, score: int, pos: int):
+            key = (tbl_n, col_obj.name)
+            prev = matched_columns_map.get(key)
+            if not prev or score > prev["score"]:
+                matched_columns_map[key] = {
+                    "table": tbl_n,
+                    "column": col_obj.name,
+                    "data_type": col_obj.data_type,
+                    "score": score,
+                    "pos": pos if not prev else min(prev["pos"], pos)
+                }
+
+        # Column-level matching
+        for tbl_name, tbl_meta in schema.tables.items():
+            cols_by_low = {c.name.lower(): c for c in tbl_meta.columns}
+            matched_col_names_in_tbl: Set[str] = set()
+
+            for col in tbl_meta.columns:
+                c_low = col.name.lower()
+                c_space = c_low.replace("_", " ")
+
+                # 1. Exact column or space-separated column phrase in prompt
+                m_exact = re.search(rf"\b(?:{re.escape(c_low)}|{re.escape(c_space)})\b", q_lower)
+                if m_exact:
+                    record_match(tbl_name, col, 100, m_exact.start())
+                    matched_col_names_in_tbl.add(c_low)
+                    candidate_tables.add(tbl_name)
+                    continue
+
+                # 2. Direct single-token / plural / synonym match (excluding generic numeric words on unrelated PKs)
+                for idx_t, tok in enumerate(tokens):
+                    if tok in stopwords or len(tok) < 3:
+                        continue
+                    tok_sing = self._singularize(tok)
+                    mapped = self.SYNONYMS.get(tok, self.SYNONYMS.get(tok_sing, tok_sing))
+                    if mapped == c_low or tok_sing == c_low:
+                        pos_m = q_lower.find(tok)
+                        record_match(tbl_name, col, 90, pos_m if pos_m >= 0 else idx_t * 5)
+                        matched_col_names_in_tbl.add(c_low)
+                        candidate_tables.add(tbl_name)
+                    elif len(tok) >= 4 and len(c_low) >= 4 and fuzz.ratio(mapped, c_low) >= 88:
+                        pos_m = q_lower.find(tok)
+                        record_match(tbl_name, col, 76, pos_m if pos_m >= 0 else idx_t * 5)
+                        matched_col_names_in_tbl.add(c_low)
+                        candidate_tables.add(tbl_name)
+
+            # 3. Domain phrase matching (net sales, total revenue, countries, unit price, etc.)
+            for pat, target_cols, sc in phrase_to_col_candidates:
+                m_ph = re.search(pat, q_lower)
+                if m_ph:
+                    # Prefer highest priority alias that exists on this table
+                    for tc in target_cols:
+                        if tc in cols_by_low:
+                            record_match(tbl_name, cols_by_low[tc], sc, m_ph.start())
+                            matched_col_names_in_tbl.add(tc)
+                            candidate_tables.add(tbl_name)
+                            break
+
+            # Award weighted table relevance points per distinct column matched
+            for c_low in matched_col_names_in_tbl:
+                sc_val = matched_columns_map[(tbl_name, cols_by_low[c_low].name)]["score"]
+                table_scores[tbl_name] += 16 if sc_val >= 95 else (12 if sc_val >= 85 else 6)
+
+        matched_list = sorted(matched_columns_map.values(), key=lambda x: (x["pos"], -x["score"]))
+        return matched_list, table_scores, candidate_tables
+
+    def _resolve_col_phrase(self, phrase: str, schema: DatabaseSchema, preferred_tables: List[str]) -> Optional[Tuple[str, str]]:
+        """Resolves a 1-2 word user phrase (e.g. 'countries', 'net sales', 'unit price', 'revenue') to (table, column)."""
+        p_clean = re.sub(r"[^a-zA-Z0-9_ ]", "", phrase.strip().lower())
+        p_snake = p_clean.replace(" ", "_")
+        p_sing = self._singularize(p_clean)
+        syn = self.SYNONYMS.get(p_clean, self.SYNONYMS.get(p_sing, p_snake))
+
+        # Phrase-level fallback aliases ordered by preference
+        alias_sets = {
+            "revenue": ["revenue", "total_revenue", "gross_sales", "net_sales"],
+            "sales": ["net_sales", "gross_sales", "revenue", "sales"],
+            "profit": ["net_profit", "gross_profit", "profit"],
+            "price": ["unit_price", "price"],
+            "cost": ["total_cost", "unit_cost", "cost"],
+            "country": ["country"],
+            "city": ["city", "store_city", "customer_city"],
+        }
+        extra_candidates = alias_sets.get(syn, []) or alias_sets.get(p_sing, [])
+        exact_targets = [p_snake, p_clean, p_sing, syn]
+
+        search_order = [t for t in preferred_tables if t in schema.tables] + [
+            t for t in schema.tables.keys() if t not in preferred_tables
+        ]
+        # Pass 1: Look in preferred_tables first (exact then semantic alias) before falling back to unrelated tables
+        for t_name in search_order:
+            cols_by_low = {c.name.lower(): c.name for c in schema.tables[t_name].columns}
+            for tgt in exact_targets:
+                if tgt in cols_by_low:
+                    return t_name, cols_by_low[tgt]
+            for alias_tgt in extra_candidates:
+                if alias_tgt in cols_by_low:
+                    return t_name, cols_by_low[alias_tgt]
+
+        # Fuzzy fallback
+        best_score = 0
+        best_hit = None
+        for t_name in search_order:
+            for col in schema.tables[t_name].columns:
+                cl = col.name.lower()
+                r = fuzz.ratio(syn, cl)
+                if r >= 82 and r > best_score:
+                    best_score = r
+                    best_hit = (t_name, col.name)
+        return best_hit
+
     def extract_slots(
         self, 
         query: str, 
@@ -805,32 +1044,21 @@ class LocalNLPEngine:
                     slots.order_by = {"column": "awards_count", "direction": "DESC"}
                     return slots
 
-        # 2. Identify Candidate Tables from Tokens, Synonyms, and Conversation History
-        STOPWORDS = {
-            "in", "on", "at", "to", "for", "with", "by", "of", "from", "the", "a", "an", "and",
-            "or", "is", "are", "was", "were", "be", "all", "any", "some", "them", "his", "her",
-            "their", "our", "its", "it", "me", "my", "we", "us", "who", "which", "what", "where",
-            "when", "why", "how", "show", "list", "give", "get", "find", "tell", "calculate",
-            "compute", "select", "many", "much", "total", "count", "average", "avg", "sum", "number"
-        }
-        candidate_tables: Set[str] = set()
-        for tbl_name, tbl_meta in schema.tables.items():
-            tbl_clean = tbl_name.lower().rstrip("s")
-            for tok in tokens:
-                if tok in STOPWORDS or len(tok) < 3:
-                    continue
-                tok_clean = tok.rstrip("s")
-                syn = self.SYNONYMS.get(tok, tok)
-                if fuzz.ratio(tok_clean, tbl_clean) >= 80 or fuzz.ratio(syn, tbl_name) >= 80:
-                    candidate_tables.add(tbl_name)
-                elif tok == tbl_name or tbl_name == tok:
-                    candidate_tables.add(tbl_name)
-                elif len(tok) >= 4 and (tok in tbl_name or tbl_name in tok):
-                    candidate_tables.add(tbl_name)
+        # 2. Identify Candidate Tables & Columns via Multi-Word Phrase, Synonym & Table Scoring
+        matched_cols_info, table_scores, candidate_tables = self._match_columns_and_tables(
+            q_lower=q_lower, tokens=tokens, schema=schema, stopwords=self.STOPWORDS
+        )
+        slots.matched_columns = matched_cols_info
+        slots.table_scores = table_scores
+        slots.wants_figures = bool(re.search(
+            r"\b(figures?|numbers?|values?|amounts?|metrics?|stats?|statistics?|details?|breakdown|each|summary|sample\s+rows?|all\s+columns?)\b",
+            q_lower
+        ))
 
         # Check if query asks "who" or mentions students/people
         if re.search(r"\b(who|which\s+student|which\s+pupil|learners?)\b", q_lower) and "students" in schema.tables:
             candidate_tables.add("students")
+            table_scores["students"] = table_scores.get("students", 0) + 12
 
         # Context continuation: inspect history for active tables, previous filters, and pronouns
         context_table = None
@@ -868,17 +1096,11 @@ class LocalNLPEngine:
 
         if not candidate_tables and context_table:
             candidate_tables.add(context_table)
+            table_scores[context_table] = table_scores.get(context_table, 0) + 10
 
-        # 3. Identify Columns & Aggregations
-        matched_columns: List[Tuple[str, str]] = []  # (table, column)
-        for tbl_name, tbl in schema.tables.items():
-            for col in tbl.columns:
-                col_name = col.name.lower()
-                for tok in tokens:
-                    mapped_tok = self.SYNONYMS.get(tok, tok)
-                    if mapped_tok == col_name or fuzz.ratio(mapped_tok, col_name) >= 88:
-                        matched_columns.append((tbl_name, col.name))
-                        candidate_tables.add(tbl_name)
+        # Order candidate tables by relevance score descending
+        ranked_tables = sorted(candidate_tables, key=lambda t: table_scores.get(t, 0), reverse=True)
+        matched_columns: List[Tuple[str, str]] = [(m["table"], m["column"]) for m in matched_cols_info]
 
         # 4. Identify Limit / Top N
         m_limit = re.search(r"\b(top|first|limit)\s+(\d+)\b", q_lower)
@@ -891,7 +1113,41 @@ class LocalNLPEngine:
         if is_who_which and has_superlative and not slots.limit:
             slots.limit = 1
 
-        # 5. Identify Aggregation (only if NOT Top N ranking and NOT "who/which" query)
+        # 5. Extract Explicit Per-Metric Aggregations & General Aggregation
+        metric_agg_specs: List[Dict[str, str]] = []
+        agg_phrase_patterns = [
+            ("MAX", r"\b(?:highest|maximum|max|peak|largest|biggest)\s+(?:of\s+)?([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)"),
+            ("MIN", r"\b(?:lowest|minimum|min|least|smallest)\s+(?:of\s+)?([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)"),
+            ("SUM", r"\b(?:total|sum\s+of|sum)\s+(?:of\s+)?([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)"),
+            ("AVG", r"\b(?:average|avg|mean)\s+(?:of\s+)?([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)"),
+        ]
+        seen_metric_keys: Set[Tuple[str, str]] = set()
+        for func_name, pat_str in agg_phrase_patterns:
+            for m_agg in re.finditer(pat_str, q_lower):
+                phrase = m_agg.group(1).strip()
+                resolved = self._resolve_col_phrase(phrase, schema, ranked_tables)
+                if not resolved:
+                    # Try single-word tail if 2-word captured extra preposition/word
+                    first_w = phrase.split()[0]
+                    resolved = self._resolve_col_phrase(first_w, schema, ranked_tables)
+                if resolved:
+                    r_tbl, r_col = resolved
+                    # Ensure target column is actually numeric
+                    t_meta_r = schema.tables.get(r_tbl)
+                    is_num = any(
+                        c.name == r_col and self._is_numeric_type(c.data_type)
+                        for c in (t_meta_r.columns if t_meta_r else [])
+                    )
+                    if is_num and (func_name, r_col) not in seen_metric_keys:
+                        seen_metric_keys.add((func_name, r_col))
+                        prefix = "highest" if func_name == "MAX" else ("lowest" if func_name == "MIN" else ("total" if func_name == "SUM" else "avg"))
+                        metric_agg_specs.append({
+                            "func": func_name,
+                            "column": r_col,
+                            "table": r_tbl,
+                            "alias": f"{prefix}_{r_col}"
+                        })
+
         active_agg = None
         if not slots.limit and not (is_who_which and has_superlative):
             if re.search(r"\b(how\s+many|count\b|total\s+number|number\s+of|total\s+count)\b", q_lower):
@@ -910,15 +1166,35 @@ class LocalNLPEngine:
             elif re.search(r"\b(lowest|minimum|min\b|least)\b", q_lower):
                 active_agg = "MIN"
 
-        # 6. Identify Order By & Direction
+        # 6. Identify Order By & Direction (handles 'sorted by countries', 'order by net sales', etc.)
         sort_dir = "ASC" if re.search(r"\b(asc|ascending|lowest\s+first|least|bottom|worst|minimum)\b", q_lower) else "DESC"
 
-        m_sort = re.search(r"\b(sort|order)\s+(?:them\s+|all\s+|results?\s+)?(?:by\s+)?([a-zA-Z_]+)\b", q_lower)
+        m_sort = re.search(
+            r"\b(?:sort|sorted|order|ordered|arrange|arranged)\s+(?:them\s+|all\s+|results?\s+)?(?:by\s+)?([a-zA-Z_]+(?:\s+[a-zA-Z_]+)?)\b",
+            q_lower
+        )
         if m_sort:
-            raw_col = m_sort.group(2)
-            if raw_col not in ("asc", "desc", "ascending", "descending"):
-                mapped_col = self.SYNONYMS.get(raw_col, raw_col)
-                slots.order_by = {"column": mapped_col, "direction": sort_dir}
+            raw_phrase = m_sort.group(1).strip()
+            raw_tokens = raw_phrase.split()
+            # Drop trailing sort direction / filler words if captured as 2nd token
+            while len(raw_tokens) > 1 and raw_tokens[-1] in ("asc", "desc", "ascending", "descending", "give", "with", "and"):
+                raw_tokens.pop()
+            clean_phrase = " ".join(raw_tokens)
+            if clean_phrase and clean_phrase not in ("asc", "desc", "ascending", "descending"):
+                resolved_sort = self._resolve_col_phrase(clean_phrase, schema, ranked_tables)
+                if resolved_sort:
+                    s_tbl, s_col = resolved_sort
+                    # If sorting by a text dimension without explicit asc/desc direction, default A-Z
+                    col_is_num = any(
+                        c.name == s_col and self._is_numeric_type(c.data_type)
+                        for c in schema.tables[s_tbl].columns
+                    )
+                    explicit_dir = bool(re.search(r"\b(asc|ascending|desc|descending)\b", q_lower))
+                    effective_dir = sort_dir if (col_is_num or explicit_dir) else "ASC"
+                    slots.order_by = {"column": s_col, "direction": effective_dir}
+                else:
+                    mapped_col = self.SYNONYMS.get(clean_phrase, self._singularize(clean_phrase))
+                    slots.order_by = {"column": mapped_col, "direction": sort_dir}
         elif is_who_which and has_superlative:
             sort_col = None
             if any(w in q_lower for w in ["score", "mark", "marks"]):
@@ -1061,13 +1337,14 @@ class LocalNLPEngine:
                     "value": city
                 })
 
-        # Identify Group By from "by <term>" or "per <term>"
-        m_group = re.search(r"\b(?:by|per|group\s+by|grouped\s+by)\s+([a-zA-Z_]+)\b", q_lower)
+        # Identify Group By from "by <term>" or "per <term>" (ignoring "sort/order by <term>")
+        m_group = re.search(r"\b(?<!sort\s)(?<!sorted\s)(?<!order\s)(?<!ordered\s)(?:by|per|group\s+by|grouped\s+by)\s+([a-zA-Z_]+)\b", q_lower)
         if m_group:
             raw_group = m_group.group(1).lower()
-            mapped_group = self.SYNONYMS.get(raw_group, raw_group)
+            mapped_group = self.SYNONYMS.get(raw_group, self._singularize(raw_group))
             found_group_col = None
-            for tbl_name, tbl_meta in schema.tables.items():
+            for tbl_name in ranked_tables + [t for t in schema.tables.keys() if t not in ranked_tables]:
+                tbl_meta = schema.tables[tbl_name]
                 if raw_group == tbl_name or raw_group == tbl_name.rstrip("s") or mapped_group == tbl_name:
                     candidate_tables.add(tbl_name)
                     for c in tbl_meta.columns:
@@ -1099,33 +1376,68 @@ class LocalNLPEngine:
                 if not any(c.lower() in existing_cols for c in cond_cols):
                     slots.filters.append({"raw": cond})
 
-        # Save extracted candidate tables
-        slots.tables = list(candidate_tables)
+        # Order candidate tables by relevance score descending
+        slots.tables = sorted(candidate_tables, key=lambda t: table_scores.get(t, 0), reverse=True)
+
+        primary_cand = slots.tables[0] if slots.tables else None
+        primary_cand_cols = {c.name.lower() for c in schema.tables[primary_cand].columns} if (primary_cand and primary_cand in schema.tables) else set()
+
+        # Check explicit dimension columns matched in query for primary candidate
+        matched_dims_on_primary = [
+            m["column"] for m in matched_cols_info
+            if m["table"] == primary_cand and not self._is_numeric_type(m["data_type"]) and self._is_metric_col_name(m["column"])
+        ]
+        # Filter metric_agg_specs that actually belong to primary_cand (or reachable joined table)
+        valid_metric_aggs = [
+            a for a in metric_agg_specs
+            if a["column"].lower() in primary_cand_cols or (primary_cand and self.resolve_join_path([primary_cand, a["table"]], schema))
+        ]
+
         if active_agg:
-            target_metric_col = "*"
-            if active_agg != "COUNT" and matched_columns:
-                # Exclude columns already chosen for group_by
-                group_col_names = {g.split(".")[-1].lower() for g in slots.group_by}
-                candidate_metric_cols = [
-                    (t, c) for t, c in matched_columns
-                    if c.lower() not in group_col_names
-                ]
-                if not candidate_metric_cols:
-                    candidate_metric_cols = matched_columns
-
-                # For math aggregations (SUM, AVG, MIN, MAX), strongly prioritize numeric columns
-                numeric_candidates = []
-                for t, c in candidate_metric_cols:
-                    t_meta = schema.tables.get(t)
-                    if t_meta:
-                        for col_def in t_meta.columns:
-                            if col_def.name == c and any(ty in col_def.data_type for ty in ["INT", "NUMERIC", "FLOAT", "REAL", "DECIMAL"]):
-                                numeric_candidates.append((t, c))
-                if numeric_candidates:
-                    candidate_metric_cols = numeric_candidates
-
-                target_metric_col = candidate_metric_cols[0][1]
-            slots.aggregations.append({"func": active_agg, "column": target_metric_col})
+            # Prefer multiple matched metric aggregations if explicitly requested (e.g. "total revenue and highest profit")
+            if len(valid_metric_aggs) >= 2 and active_agg != "COUNT":
+                slots.aggregations.extend([
+                    {"func": a["func"], "column": a["column"], "alias": a["alias"]}
+                    for a in valid_metric_aggs
+                ])
+            else:
+                target_metric_col = "*"
+                if active_agg != "COUNT" and matched_columns:
+                    # Prefer numeric columns on highest-scoring candidate tables
+                    group_col_names = {g.split(".")[-1].lower() for g in slots.group_by}
+                    ordered_matches = sorted(
+                        matched_cols_info,
+                        key=lambda m: (0 if m["table"] == primary_cand else 1, -m["score"], m["pos"])
+                    )
+                    candidate_metric_cols = [
+                        (m["table"], m["column"]) for m in ordered_matches
+                        if m["column"].lower() not in group_col_names and self._is_numeric_type(m["data_type"]) and self._is_metric_col_name(m["column"])
+                    ]
+                    if not candidate_metric_cols:
+                        candidate_metric_cols = [
+                            (m["table"], m["column"]) for m in ordered_matches
+                            if m["column"].lower() not in group_col_names
+                        ]
+                    if candidate_metric_cols:
+                        target_metric_col = candidate_metric_cols[0][1]
+                slots.aggregations.append({"func": active_agg, "column": target_metric_col})
+        elif slots.limit and valid_metric_aggs and (slots.group_by or (matched_dims_on_primary and len(valid_metric_aggs) >= 2) or (matched_dims_on_primary and any(a["func"] in ("SUM", "AVG") for a in valid_metric_aggs))):
+            # Grouped Top-N analytical query (e.g. "Top 3 products with highest net sales, total revenue")
+            for dim_c in matched_dims_on_primary:
+                if dim_c not in slots.group_by and not any(g.endswith(f".{dim_c}") for g in slots.group_by):
+                    slots.group_by.append(dim_c)
+            if slots.order_by and not any(
+                c.name == slots.order_by["column"] and self._is_numeric_type(c.data_type)
+                for t in slots.tables if t in schema.tables
+                for c in schema.tables[t].columns
+            ):
+                s_col = slots.order_by["column"]
+                if s_col in primary_cand_cols and s_col not in slots.group_by:
+                    slots.group_by.append(s_col)
+            slots.aggregations.extend([
+                {"func": a["func"], "column": a["column"], "alias": a["alias"]}
+                for a in valid_metric_aggs
+            ])
 
         return slots
 
@@ -1256,28 +1568,32 @@ class LocalNLPEngine:
         else:
             primary_table = slots.tables[0]
 
-        # Prioritize table that contains the metric or query subject
+        # Prioritize table that matches best by table_scores and owns requested metrics
+        best_score = slots.table_scores.get(primary_table, 0)
         if slots.aggregations and slots.aggregations[0]["column"] != "*":
             target_metric = slots.aggregations[0]["column"].lower()
-            for t in list(slots.tables):
-                if t in schema.tables:
-                    col_names_in_t = [c.name.lower() for c in schema.tables[t].columns]
-                    if target_metric in col_names_in_t:
-                        primary_table = t
-                        slots.tables = [t] + [x for x in slots.tables if x != t]
-                        break
-        elif any(k in q_lower for k in ["sale", "revenue", "store", "units"]):
-            if "sales" in schema.tables:
-                primary_table = "sales"
-                slots.tables = ["sales"] + [x for x in slots.tables if x != "sales"]
-        elif any(k in q_lower for k in ["product", "item", "inventory"]):
-            if "sarah_products" in schema.tables:
-                primary_table = "sarah_products"
-                slots.tables = ["sarah_products"] + [x for x in slots.tables if x != "sarah_products"]
-        elif any(k in q_lower for k in ["match", "cricket", "ipl", "wicket", "bowler", "scorer"]):
-            if "ipl" in schema.tables:
-                primary_table = "ipl"
-                slots.tables = ["ipl"] + [x for x in slots.tables if x != "ipl"]
+            cur_has_metric = primary_table in schema.tables and target_metric in [c.name.lower() for c in schema.tables[primary_table].columns]
+            if not cur_has_metric:
+                for t in list(slots.tables):
+                    if t in schema.tables:
+                        col_names_in_t = [c.name.lower() for c in schema.tables[t].columns]
+                        if target_metric in col_names_in_t:
+                            primary_table = t
+                            slots.tables = [t] + [x for x in slots.tables if x != t]
+                            break
+        elif best_score < 15:
+            if any(k in q_lower for k in ["sale", "revenue", "store", "units"]) and "sales" in schema.tables:
+                if slots.table_scores.get("sales", 0) >= best_score:
+                    primary_table = "sales"
+                    slots.tables = ["sales"] + [x for x in slots.tables if x != "sales"]
+            elif any(k in q_lower for k in ["product", "item", "inventory"]) and "sarah_products" in schema.tables:
+                if slots.table_scores.get("sarah_products", 0) >= best_score:
+                    primary_table = "sarah_products"
+                    slots.tables = ["sarah_products"] + [x for x in slots.tables if x != "sarah_products"]
+            elif any(k in q_lower for k in ["match", "cricket", "ipl", "wicket", "bowler", "scorer"]) and "ipl" in schema.tables:
+                if slots.table_scores.get("ipl", 0) >= best_score:
+                    primary_table = "ipl"
+                    slots.tables = ["ipl"] + [x for x in slots.tables if x != "ipl"]
 
         # Ensure any tables referenced in group_by are included
         for g_expr in slots.group_by:
@@ -1290,7 +1606,6 @@ class LocalNLPEngine:
         if len(slots.tables) > 1:
             reachable = [primary_table]
             for cand in slots.tables[1:]:
-                # If cand is the table in group_by or metric, keep it
                 path = self.resolve_join_path([primary_table, cand], schema)
                 if path:
                     reachable.append(cand)
@@ -1298,100 +1613,164 @@ class LocalNLPEngine:
 
         tbl_meta = schema.tables.get(primary_table)
         col_names = [c.name for c in tbl_meta.columns] if tbl_meta else []
+        col_types_by_tbl = {
+            t: {c.name.lower(): c for c in schema.tables[t].columns}
+            for t in slots.tables if t in schema.tables
+        }
+
+        def qualify_col(tbl_n: str, col_n: str) -> str:
+            return f"{tbl_n}.{col_n}" if len(slots.tables) > 1 else col_n
+
+        def find_col_in_active_tables(col_raw: str) -> Optional[Tuple[str, ColumnMeta]]:
+            c_low = col_raw.split(".")[-1].lower()
+            for t in slots.tables:
+                if t in col_types_by_tbl and c_low in col_types_by_tbl[t]:
+                    return t, col_types_by_tbl[t][c_low]
+            return None
 
         # Projections
-        projections = []
-        explanation_parts = []
+        projections: List[str] = []
+        explanation_parts: List[str] = []
+        agg_aliases: List[str] = []
 
         if slots.projections:
-            # Pre-configured structured projections
             for expr, alias in slots.projections:
                 projections.append(f"{expr} AS {alias}" if alias else expr)
             explanation_parts.append(f"Ranked metrics for `{primary_table}`")
         elif slots.aggregations:
-            agg = slots.aggregations[0]
-            func = agg["func"]
-            target_col = agg["column"]
-            
-            # Locate table that actually contains target_col
-            qualified_target_col = target_col
-            found_col_table = None
-            for t in slots.tables:
-                if t in schema.tables:
-                    col_names_in_t = {c.name.lower(): c.name for c in schema.tables[t].columns}
-                    if target_col.lower() in col_names_in_t:
-                        found_col_table = t
-                        actual_name = col_names_in_t[target_col.lower()]
-                        qualified_target_col = f"{t}.{actual_name}" if len(slots.tables) > 1 else actual_name
-                        break
+            seen_agg_exprs: Set[str] = set()
+            for agg in slots.aggregations:
+                func = agg["func"]
+                target_col = agg["column"]
 
-            if not found_col_table and target_col != "*":
-                # Check remaining schema tables
-                for t, s_meta in schema.tables.items():
-                    col_names_in_t = {c.name.lower(): c.name for c in s_meta.columns}
-                    if target_col.lower() in col_names_in_t:
-                        if t not in slots.tables:
-                            slots.tables.append(t)
-                        found_col_table = t
-                        actual_name = col_names_in_t[target_col.lower()]
-                        qualified_target_col = f"{t}.{actual_name}" if len(slots.tables) > 1 else actual_name
-                        break
+                found_pair = find_col_in_active_tables(target_col) if target_col != "*" else None
+                if not found_pair and target_col != "*":
+                    # Check remaining schema tables for the metric column
+                    for t, s_meta in schema.tables.items():
+                        c_map = {c.name.lower(): c for c in s_meta.columns}
+                        if target_col.lower() in c_map:
+                            if t not in slots.tables and self.resolve_join_path([primary_table, t], schema):
+                                slots.tables.append(t)
+                                col_types_by_tbl[t] = c_map
+                                found_pair = (t, c_map[target_col.lower()])
+                                break
 
-            if target_col == "*" or qualified_target_col == "*":
-                if func == "COUNT":
-                    projections.append("COUNT(*) AS total_count")
-                    explanation_parts.append(f"Count of records in `{primary_table}`")
-                else:
-                    numeric_cols = [
-                        c.name for c in tbl_meta.columns 
-                        if any(ty in c.data_type for ty in ["INT", "NUMERIC", "FLOAT"])
-                        and not c.name.lower().endswith("_id") and c.name.lower() != "id"
-                    ]
-                    target_col = numeric_cols[0] if numeric_cols else "*"
-                    if target_col != "*":
-                        projections.append(f"{func}({target_col}) AS {func.lower()}_{target_col}")
-                        explanation_parts.append(f"Computed {func} of `{target_col}`")
+                if target_col == "*" or not found_pair:
+                    if func == "COUNT":
+                        if "COUNT(*) AS total_count" not in projections:
+                            projections.append("COUNT(*) AS total_count")
+                            agg_aliases.append("total_count")
+                            explanation_parts.append(f"Count of records in `{primary_table}`")
                     else:
-                        projections.append("COUNT(*) AS total_count")
-            else:
-                alias = f"{func.lower()}_{target_col.split('.')[-1]}"
-                if func == "AVG":
-                    projections.append(f"ROUND({func}({qualified_target_col}), 2) AS {alias}")
+                        numeric_cols = [
+                            c.name for c in (tbl_meta.columns if tbl_meta else [])
+                            if self._is_numeric_type(c.data_type) and self._is_metric_col_name(c.name)
+                        ]
+                        fallback_c = numeric_cols[0] if numeric_cols else "*"
+                        if fallback_c != "*":
+                            q_c = qualify_col(primary_table, fallback_c)
+                            alias = agg.get("alias") or f"{func.lower()}_{fallback_c}"
+                            expr = f"ROUND({func}({q_c}), 2) AS {alias}" if func == "AVG" else f"{func}({q_c}) AS {alias}"
+                            if expr not in seen_agg_exprs:
+                                seen_agg_exprs.add(expr)
+                                projections.append(expr)
+                                agg_aliases.append(alias)
+                                explanation_parts.append(f"Computed {func} of `{q_c}`")
+                        elif "COUNT(*) AS total_count" not in projections:
+                            projections.append("COUNT(*) AS total_count")
+                            agg_aliases.append("total_count")
                 else:
-                    projections.append(f"{func}({qualified_target_col}) AS {alias}")
-                explanation_parts.append(f"Computed {func} of `{qualified_target_col}`")
+                    f_tbl, f_col = found_pair
+                    qualified_target_col = qualify_col(f_tbl, f_col.name)
+                    alias = agg.get("alias") or f"{func.lower()}_{f_col.name}"
+                    expr = f"ROUND({func}({qualified_target_col}), 2) AS {alias}" if func == "AVG" else f"{func}({qualified_target_col}) AS {alias}"
+                    if expr not in seen_agg_exprs:
+                        seen_agg_exprs.add(expr)
+                        projections.append(expr)
+                        agg_aliases.append(alias)
+                        explanation_parts.append(f"Computed {func} of `{qualified_target_col}`")
 
             if slots.group_by:
-                # Prepend group by columns
                 clean_group_cols = []
                 for g_col in slots.group_by:
-                    c_alias = g_col.replace(".", "_") if "." in g_col else g_col
-                    clean_group_cols.append(f"{g_col} AS {c_alias}")
+                    if len(slots.tables) == 1 and "." in g_col and g_col.split(".")[0].lower() == primary_table.lower():
+                        g_col_clean = g_col.split(".", 1)[1]
+                        clean_group_cols.append(g_col_clean)
+                    elif "." in g_col:
+                        clean_group_cols.append(f"{g_col} AS {g_col.replace('.', '_')}")
+                    else:
+                        clean_group_cols.append(g_col)
                 projections = clean_group_cols + projections
         else:
-            # Select relevant descriptive columns across all involved tables
-            for t in slots.tables:
-                t_cols = [c.name for c in schema.tables[t].columns] if t in schema.tables else []
-                for candidate_col in ["name", "title", "score", "revenue", "store_city", "attendance_percentage", "product_name", "category", "best_bowling", "top_scorer", "player_of_the_match", "match_winner"]:
-                    if candidate_col in t_cols:
-                        proj_expr = f"{t}.{candidate_col}" if len(slots.tables) > 1 else candidate_col
-                        if proj_expr not in projections:
-                            projections.append(proj_expr)
+            # 1. Include ALL explicitly prompted columns from active tables in mention order
+            selected_col_keys: Set[Tuple[str, str]] = set()
+            has_numeric_proj = False
+
+            for m in slots.matched_columns:
+                mt, mc = m["table"], m["column"]
+                if mt not in slots.tables:
+                    continue
+                if (mt, mc) in selected_col_keys:
+                    continue
+                selected_col_keys.add((mt, mc))
+                projections.append(qualify_col(mt, mc))
+                if self._is_numeric_type(m["data_type"]) and self._is_metric_col_name(mc):
+                    has_numeric_proj = True
+
+            # 2. Check if order_by resolves cleanly to a valid active column & include it
+            if slots.order_by and slots.order_by.get("column") not in (None, "*"):
+                hit_sort = find_col_in_active_tables(slots.order_by["column"])
+                if hit_sort:
+                    st, sc_meta = hit_sort
+                    if (st, sc_meta.name) not in selected_col_keys:
+                        selected_col_keys.add((st, sc_meta.name))
+                        projections.append(qualify_col(st, sc_meta.name))
+                        if self._is_numeric_type(sc_meta.data_type) and self._is_metric_col_name(sc_meta.name):
+                            has_numeric_proj = True
+
+            # 3. If no columns matched (e.g. "Show summary and sample rows from X"), pick balanced text + figures
+            if not projections:
+                all_meta_cols = [c for c in (tbl_meta.columns if tbl_meta else []) if self._is_metric_col_name(c.name)]
+                if not all_meta_cols and tbl_meta:
+                    all_meta_cols = list(tbl_meta.columns)
+                text_cols = [c for c in all_meta_cols if not self._is_numeric_type(c.data_type)]
+                num_cols = [c for c in all_meta_cols if self._is_numeric_type(c.data_type)]
+                balanced = text_cols[:3] + num_cols[:4]
+                if not balanced:
+                    balanced = all_meta_cols[:6]
+                for c in balanced:
+                    selected_col_keys.add((primary_table, c.name))
+                    projections.append(qualify_col(primary_table, c.name))
+                    if self._is_numeric_type(c.data_type):
+                        has_numeric_proj = True
+
+            # 4. Numeric Figures Guarantee: Never return ONLY text labels if user asked for figures or none matched
+            if not has_numeric_proj or slots.wants_figures:
+                current_num_count = sum(
+                    1 for (t_k, c_k) in selected_col_keys
+                    if t_k in col_types_by_tbl and c_k.lower() in col_types_by_tbl[t_k]
+                    and self._is_numeric_type(col_types_by_tbl[t_k][c_k.lower()].data_type)
+                    and self._is_metric_col_name(c_k)
+                )
+                target_num_min = 2 if slots.wants_figures else 1
+                if current_num_count < target_num_min:
+                    # Rank numeric columns by analytical significance
+                    priority_rx = re.compile(r"(net_sales|gross_sales|revenue|net_profit|gross_profit|unit_price|price|inventory|units_sold|quantity|score|attendance|highscore|margin|amount|cost|rating)", re.I)
+                    cand_nums = []
+                    for t in slots.tables:
+                        if t in schema.tables:
+                            for c in schema.tables[t].columns:
+                                if (t, c.name) not in selected_col_keys and self._is_numeric_type(c.data_type) and self._is_metric_col_name(c.name):
+                                    prio = 0 if priority_rx.search(c.name) else 1
+                                    cand_nums.append((prio, 0 if t == primary_table else 1, t, c))
+                    cand_nums.sort(key=lambda x: (x[0], x[1]))
+                    needed = max(0, (3 if slots.wants_figures else 2) - current_num_count)
+                    for _, _, t_n, c_obj in cand_nums[:needed]:
+                        selected_col_keys.add((t_n, c_obj.name))
+                        projections.append(qualify_col(t_n, c_obj.name))
 
             if not projections:
-                content_cols = [c.name for c in tbl_meta.columns if not c.name.lower().endswith("_id") and c.name.lower() != "id"]
-                projections = content_cols[:4] if content_cols else col_names[:3] if col_names else ["*"]
-
-            if slots.order_by and slots.order_by["column"] not in projections and slots.order_by["column"] != "*":
-                sort_col = slots.order_by["column"]
-                proj_sort = sort_col
-                if len(slots.tables) > 1 and "." not in sort_col:
-                    for t in slots.tables:
-                        if t in schema.tables and sort_col.lower() in [c.name.lower() for c in schema.tables[t].columns]:
-                            proj_sort = f"{t}.{sort_col}"
-                            break
-                if proj_sort not in projections and sort_col not in projections:
-                    projections.append(proj_sort)
+                projections = ["*"]
 
             explanation_parts.append(f"Retrieved `{', '.join(projections)}` from `{primary_table}`")
 
@@ -1413,7 +1792,11 @@ class LocalNLPEngine:
                 col = "store_city"
             elif col == "city" and "city" in col_names:
                 col = "city"
-            
+            elif len(slots.tables) > 1 and "." not in col:
+                hit_f = find_col_in_active_tables(col)
+                if hit_f:
+                    col = f"{hit_f[0]}.{hit_f[1].name}"
+
             val = flt["value"]
             if flt.get("op") == "LIKE":
                 val_str = f"'{val}'"
@@ -1427,39 +1810,52 @@ class LocalNLPEngine:
         # Group By
         group_sql = ""
         if slots.group_by:
-            group_sql = f" GROUP BY {', '.join(slots.group_by)}"
+            clean_gb = [
+                g.split(".", 1)[1] if (len(slots.tables) == 1 and "." in g and g.split(".")[0].lower() == primary_table.lower()) else g
+                for g in slots.group_by
+            ]
+            group_sql = f" GROUP BY {', '.join(clean_gb)}"
 
-        # Order By: Crucial PostgreSQL & SQLite semantic correctness
+        # Order By: Validate sort column against active tables or aliases
         order_sql = ""
         if slots.order_by:
-            sort_col = slots.order_by['column']
-            if len(slots.tables) > 1 and "." not in sort_col:
-                for t in slots.tables:
-                    if t in schema.tables and sort_col.lower() in [c.name.lower() for c in schema.tables[t].columns]:
-                        sort_col = f"{t}.{sort_col}"
-                        break
-            order_sql = f" ORDER BY {sort_col} {slots.order_by.get('direction', 'DESC')}"
+            raw_sort = slots.order_by["column"]
+            dir_str = slots.order_by.get("direction", "DESC")
+            if raw_sort in agg_aliases or raw_sort == "awards_count":
+                order_sql = f" ORDER BY {raw_sort} {dir_str}"
+            else:
+                hit_sort = find_col_in_active_tables(raw_sort)
+                if hit_sort:
+                    st, sc_meta = hit_sort
+                    qualified_sort = qualify_col(st, sc_meta.name)
+                    if slots.aggregations and slots.group_by and agg_aliases and slots.limit and not self._is_numeric_type(sc_meta.data_type):
+                        # When ranking Top N with explicit metric + dimension sort, rank by primary metric first then tie-break by dimension
+                        order_sql = f" ORDER BY {agg_aliases[0]} DESC, {qualified_sort} {dir_str}"
+                    else:
+                        order_sql = f" ORDER BY {qualified_sort} {dir_str}"
+                elif agg_aliases:
+                    order_sql = f" ORDER BY {agg_aliases[0]} DESC"
         elif slots.group_by:
-            # When grouping with aggregations, ordering by the metric column is valid
-            order_sql = " ORDER BY 2 DESC"
+            if agg_aliases:
+                order_sql = f" ORDER BY {agg_aliases[0]} DESC"
+            else:
+                order_sql = " ORDER BY 2 DESC"
         elif not slots.aggregations:
-            # Single-row scalar aggregates MUST NEVER have an unaggregated ORDER BY clause
-            if "highest" in q_lower or "top" in q_lower or "best" in q_lower:
-                num_cols = [
-                    c.name for c in tbl_meta.columns 
-                    if any(t in c.data_type for t in ["INT", "NUMERIC", "FLOAT"])
-                    and not c.name.lower().endswith("_id") and c.name.lower() != "id"
+            # Ensure ranking metric is both sorted AND included in SELECT projections
+            if any(w in q_lower for w in ("highest", "top", "best", "lowest", "least")):
+                sort_d = "ASC" if any(w in q_lower for w in ("lowest", "least")) else "DESC"
+                metric_priority_rx = re.compile(r"(net_sales|gross_sales|revenue|net_profit|unit_price|price|score|attendance|highscore|inventory|units_sold|quantity)", re.I)
+                num_cands = [
+                    c.name for c in (tbl_meta.columns if tbl_meta else [])
+                    if self._is_numeric_type(c.data_type) and self._is_metric_col_name(c.name)
                 ]
-                if num_cols:
-                    order_sql = f" ORDER BY {num_cols[0]} DESC"
-            elif "lowest" in q_lower or "least" in q_lower:
-                num_cols = [
-                    c.name for c in tbl_meta.columns 
-                    if any(t in c.data_type for t in ["INT", "NUMERIC", "FLOAT"])
-                    and not c.name.lower().endswith("_id") and c.name.lower() != "id"
-                ]
-                if num_cols:
-                    order_sql = f" ORDER BY {num_cols[0]} ASC"
+                num_cands.sort(key=lambda n: 0 if metric_priority_rx.search(n) else 1)
+                if num_cands:
+                    rank_col = num_cands[0]
+                    q_rank = qualify_col(primary_table, rank_col)
+                    if q_rank not in projections and rank_col not in projections:
+                        projections.append(q_rank)
+                    order_sql = f" ORDER BY {q_rank} {sort_d}"
 
         # Limit
         limit_sql = f" LIMIT {slots.limit}" if slots.limit else ""

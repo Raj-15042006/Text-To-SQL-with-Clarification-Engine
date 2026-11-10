@@ -25,7 +25,17 @@ class ChatMessage(BaseModel):
     row_count: int = 0
     execution_time_ms: float = 0.0
     relationships: List[str] = Field(default_factory=list)
-    status: str = "success"  # "success", "awaiting_clarification", "error"
+    thinking_steps: List[Dict[str, str]] = Field(default_factory=list)
+    assumptions: List[Dict[str, Any]] = Field(default_factory=list)
+    provenance: List[Dict[str, str]] = Field(default_factory=list)
+    confidence_score: Optional[int] = None
+    confidence_level: Optional[str] = None
+    confidence_reasons: List[str] = Field(default_factory=list)
+    data_quality_warnings: List[str] = Field(default_factory=list)
+    pii_warning: Optional[str] = None
+    cost_info: Optional[Dict[str, Any]] = None
+    ask_after_answer: Optional[Dict[str, Any]] = None
+    status: str = "success"  # "success", "awaiting_clarification", "error", "schema_gap"
     clarification: Optional[ClarificationRequest] = None
     session_id: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.datetime.now().isoformat())

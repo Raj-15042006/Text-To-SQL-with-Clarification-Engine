@@ -31,6 +31,7 @@ class ClarificationOption(BaseModel):
     label: str = Field(description="Human-readable label displayed as a choice, e.g. 'Total Revenue (Sum of total_amount)'")
     description: Optional[str] = Field(default=None, description="Brief explanation of what this option implies")
     implied_filter_or_metric: Optional[str] = Field(default=None, description="The concrete metric, column, or filter mapped to this option")
+    estimated_rows: Optional[int] = Field(default=None, description="Estimated What-If matching row count preview")
 
 class ClarificationRequest(BaseModel):
     question: str = Field(description="Clear, concise clarification question directed to the user")
@@ -197,6 +198,39 @@ class AmbiguityDetector:
                 ]
             )
 
+        # Dynamic order_status scope check when order_status exists in active schema
+        if schema and hasattr(schema, "tables"):
+            status_tables = [
+                t_name for t_name, t_meta in schema.tables.items()
+                if any(c.name.lower() in ("order_status", "status") for c in t_meta.columns)
+            ]
+            if status_tables and re.search(r"\b(valid\s+orders?|completed\s+orders?|how\s+many\s+orders?|total\s+orders?|orders?\s+by\s+[a-z_]+)\b", q_lower):
+                if not any(k in q_lower for k in ("cancelled", "canceled", "returned", "pending", "shipped", "delivered", "all status", "status =", "regardless")):
+                    target_tbl = status_tables[0]
+                    status_col = next(
+                        c.name for c in schema.tables[target_tbl].columns
+                        if c.name.lower() in ("order_status", "status")
+                    )
+                    return AmbiguityIssue(
+                        category=AmbiguityCategory.MISSING_FILTER,
+                        issue=f"Order status filter scope on '{target_tbl}.{status_col}' is unspecified.",
+                        description=f"The '{target_tbl}' table includes '{status_col}' values (such as Completed, Cancelled, Returned). Clarify whether to exclude cancelled/returned rows.",
+                        details={"table": target_tbl, "column": status_col},
+                        suggested_question=f"Which '{status_col}' records should be included?",
+                        suggested_options=[
+                            ClarificationOption(
+                                id="opt_ord_completed",
+                                label=f"Completed / fulfilled orders only (exclude Cancelled & Returned)",
+                                implied_filter_or_metric=f"{status_col} NOT IN ('Cancelled', 'Returned')"
+                            ),
+                            ClarificationOption(
+                                id="opt_ord_all",
+                                label="All orders regardless of status",
+                                implied_filter_or_metric="1=1"
+                            )
+                        ]
+                    )
+
         # Check for destructive statement missing WHERE clause
         if re.search(r"^\s*(delete|remove|truncate|drop|update)\b", q_lower):
             if "where" not in q_lower:
@@ -285,6 +319,40 @@ class AmbiguityDetector:
                     ClarificationOption(id="opt_att_50", label="Attendance < 50%" if is_low else "Attendance >= 90%", implied_filter_or_metric="attendance_percentage < 50" if is_low else "attendance_percentage >= 90")
                 ]
             )
+
+        # Metric definition ambiguity (Section 2: churn, retention, conversion rate, etc.)
+        m_def = re.search(r"\b(churn(?:\s+rate)?|retention(?:\s+rate)?|conversion(?:\s+rate)?)\b", q_lower)
+        if m_def and not any(k in q_lower for k in ("defined as", "using ", "inactivity", "cancelled", "canceled", "formula")):
+            metric_phrase = m_def.group(1)
+            schema_cols = set()
+            if schema and hasattr(schema, "tables"):
+                for t_meta in schema.tables.values():
+                    schema_cols.update(c.name.lower() for c in t_meta.columns)
+            if metric_phrase.replace(" ", "_") not in schema_cols:
+                return AmbiguityIssue(
+                    category=AmbiguityCategory.UNCLEAR_COMPARISON,
+                    issue=f"Domain definition for metric '{metric_phrase}' is ambiguous.",
+                    description=f"'{metric_phrase}' can mean explicit cancellation status, 30-day inactivity, or net repeat activity.",
+                    details={"metric_term": metric_phrase},
+                    suggested_question=f"How is '{metric_phrase}' defined in your business logic?",
+                    suggested_options=[
+                        ClarificationOption(
+                            id="opt_def_cancel",
+                            label="Explicit Cancelled / Returned status records",
+                            implied_filter_or_metric="order_status = 'Cancelled'"
+                        ),
+                        ClarificationOption(
+                            id="opt_def_inactivity_30",
+                            label="No activity / orders in the last 30 days",
+                            implied_filter_or_metric="days_since_last_order > 30"
+                        ),
+                        ClarificationOption(
+                            id="opt_def_repeat",
+                            label="Customers / entities with repeat activity (>= 2 records)",
+                            implied_filter_or_metric="COUNT(*) >= 2"
+                        )
+                    ]
+                )
 
         return None
 
@@ -543,6 +611,50 @@ class AmbiguityDetector:
                     ]
                 )
 
+        # Dynamic check: multiple active FKs connecting two tables mentioned in the query
+        if schema and hasattr(schema, "tables"):
+            pair_fks: Dict[Tuple[str, str], List[Dict[str, Any]]] = {}
+            for src_t, t_meta in schema.tables.items():
+                for fk in getattr(t_meta, "foreign_keys", []) or []:
+                    if not fk.get("is_active", True):
+                        continue
+                    ref = str(fk.get("references", ""))
+                    if "." not in ref:
+                        continue
+                    tgt_t, tgt_c = ref.split(".", 1)
+                    if tgt_t not in schema.tables:
+                        continue
+                    pair_fks.setdefault((src_t, tgt_t), []).append({
+                        "src_table": src_t,
+                        "src_col": fk.get("column"),
+                        "tgt_table": tgt_t,
+                        "tgt_col": tgt_c
+                    })
+
+            for (src_t, tgt_t), edges in pair_fks.items():
+                if len(edges) >= 2:
+                    src_stem = src_t.lower().rstrip("s")
+                    tgt_stem = tgt_t.lower().rstrip("s")
+                    if (src_t.lower() in q_lower or src_stem in q_lower) and (tgt_t.lower() in q_lower or tgt_stem in q_lower):
+                        explicitly_chosen = any(str(e["src_col"]).lower() in q_lower for e in edges)
+                        if not explicitly_chosen:
+                            opts = [
+                                ClarificationOption(
+                                    id=f"opt_fk_{idx}",
+                                    label=f"Join via `{e['src_table']}.{e['src_col']}` -> `{e['tgt_table']}.{e['tgt_col']}`",
+                                    implied_filter_or_metric=f"{e['src_table']}.{e['src_col']} = {e['tgt_table']}.{e['tgt_col']}"
+                                )
+                                for idx, e in enumerate(edges[:4], 1)
+                            ]
+                            return AmbiguityIssue(
+                                category=AmbiguityCategory.AMBIGUOUS_RELATIONSHIP,
+                                issue=f"Multiple active foreign-key paths exist between '{src_t}' and '{tgt_t}'.",
+                                description=f"Detected {len(edges)} relationship keys linking '{src_t}' to '{tgt_t}'. Select which path should join the tables.",
+                                details={"table_a": src_t, "table_b": tgt_t, "paths": [e["src_col"] for e in edges]},
+                                suggested_question=f"Which join relationship between '{src_t}' and '{tgt_t}' should be used?",
+                                suggested_options=opts
+                            )
+
         return None
 
     # =========================================================================
@@ -564,8 +676,9 @@ class AmbiguityDetector:
             item_entity = match_top_n.group(3)
             # Whitelist domain-standard ranking expressions that have unambiguous metrics
             explicit_ranking_whitelist = [
-                "by score", "by marks", "by credits", "by revenue", "by sales", "by date", "by attendance",
-                "by enrollment", "by price", "by rating", "by wins", "by wickets", "by runs",
+                "by score", "by average score", "by avg score", "by total score", "by marks", "by credits",
+                "by revenue", "by total revenue", "by net sales", "by gross sales", "by sales", "by total sales",
+                "by date", "by attendance", "by enrollment", "by price", "by rating", "by wins", "by wickets", "by runs",
                 "wicket", "wickets", "run scorer", "run scorers", "batsman", "batsmen", "bowler", "bowlers",
                 "best economy", "economy", "strike rate", "award", "awards", "motm", "mvp",
                 "highest", "lowest", "most", "least", "best", "worst", "wins", "win"
